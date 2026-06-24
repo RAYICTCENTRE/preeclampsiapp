@@ -4,4 +4,10 @@ builder = "NIXPACKS"
 [build.nixpacks]
 plan = '''
 providers = ["php"]
+
+[build.nixpacks.variables]
+PHP_VERSION = "8.2"
 '''
+
+[deploy]
+startCommand = "php -S 0.0.0.0:$PORT server.php"
