@@ -20,10 +20,6 @@ def home():
 def predict():
 
     try:
-        # -------------------------------------------------
-        # 1. Receive JSON from the PHP application
-        # -------------------------------------------------
-
         payload = request.get_json(silent=True)
 
         if not payload:
@@ -33,23 +29,15 @@ def predict():
                 "message": "No JSON data received"
             }), 400
 
-        # -------------------------------------------------
-        # 2. Convert the JSON to Base64
-        # -------------------------------------------------
-        # predict_ai.py already expects its input as
-        # a Base64 command-line argument.
-        # -------------------------------------------------
-
+        # Convert request data to JSON
         json_string = json.dumps(payload)
 
+        # Encode for predict_ai.py
         encoded_payload = base64.b64encode(
             json_string.encode("utf-8")
         ).decode("utf-8")
 
-        # -------------------------------------------------
-        # 3. Locate predict_ai.py
-        # -------------------------------------------------
-
+        # Locate predict_ai.py
         predict_script = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             "predict_ai.py"
@@ -62,10 +50,7 @@ def predict():
                 "message": "predict_ai.py not found"
             }), 500
 
-        # -------------------------------------------------
-        # 4. Run the existing AI engine
-        # -------------------------------------------------
-
+        # Run AI engine
         result = subprocess.run(
             [
                 sys.executable,
@@ -77,22 +62,13 @@ def predict():
             timeout=60
         )
 
-        # -------------------------------------------------
-        # 5. Check for Python execution errors
-        # -------------------------------------------------
-
         if result.returncode != 0:
-
             return jsonify({
                 "status": "error",
                 "success": False,
                 "message": "AI engine failed",
                 "details": result.stderr
             }), 500
-
-        # -------------------------------------------------
-        # 6. Read the JSON returned by predict_ai.py
-        # -------------------------------------------------
 
         output = result.stdout.strip()
 
@@ -104,10 +80,6 @@ def predict():
             }), 500
 
         prediction = json.loads(output)
-
-        # -------------------------------------------------
-        # 7. Return prediction to PHP
-        # -------------------------------------------------
 
         return jsonify(prediction)
 
@@ -138,8 +110,10 @@ def predict():
 
 if __name__ == "__main__":
 
+    port = int(os.environ.get("PORT", 5000))
+
     app.run(
-        host="127.0.0.1",
-        port=5000,
-        debug=True
+        host="0.0.0.0",
+        port=port,
+        debug=False
     )
