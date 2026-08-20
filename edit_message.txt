@@ -1,6 +1,6 @@
 <?php
 session_start();
-$conn = new mysqli("localhost","root","","mothercare");
+require_once __DIR__ . '/db_connect.php';
 
 $message_id = intval($_POST['message_id'] ?? 0);
 $new_msg = trim($_POST['message'] ?? '');

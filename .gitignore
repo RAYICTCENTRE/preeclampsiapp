@@ -1,0 +1,37 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Python cache and virtual environments
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+env/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Debugging and temporary files
+debug_log.txt
+ai_debug.txt
+test_db.php
+test_ai.py
+test_ai_direct.php
+*.log
+
+# Personal uploaded documents
+uploads/*PASSPORT*
+assets/*PASSPORT*
+
+# Temporary uploads
+uploads/tmp/
+
+# User-uploaded doctor photos
+uploads/doctors/*
+!uploads/doctors/.gitkeep
