@@ -35,3 +35,6 @@ uploads/tmp/
 # User-uploaded doctor photos
 uploads/doctors/*
 !uploads/doctors/.gitkeep
+
+# Local database dumps
+*.sql
