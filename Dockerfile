@@ -6,6 +6,4 @@ COPY . /app/public
 
 ENV SERVER_NAME=:8080
 
-WORKDIR /app/public
-
-EXPOSE 8080
+WORKDIR /app
