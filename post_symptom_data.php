@@ -1,7 +1,9 @@
 <?php
-// ============================================
-// POST_SYMPTOM_DATA.PHP - AI FIRST, PHP FALLBACK
-// ============================================
+// ============================================================
+// POST_SYMPTOM_DATA.PHP
+// AI FIRST → PHP FALLBACK
+// Works locally and on Railway
+// ============================================================
 
 error_reporting(0);
 ini_set('display_errors', 0);
@@ -10,373 +12,768 @@ ini_set('log_errors', 1);
 session_start();
 header('Content-Type: application/json');
 
-// ============================================
+// ============================================================
 // CONFIGURATION
-// ============================================
-$use_ai = true;
-$python_exe = 'C:\\Users\\pc\\AppData\\Local\\Programs\\Python\\Python314\\python.exe';
-$ai_script = 'C:\\xampp\\htdocs\\mothercare\\predict_ai.py';
+// ============================================================
 
-// ============================================
+$use_ai = true;
+
+// Railway variable:
+// AI_API_URL=https://preeclampsiapp-production-0d76.up.railway.app/predict
+$ai_api_url = getenv('AI_API_URL');
+
+// Local fallback for development
+if (empty($ai_api_url)) {
+    $ai_api_url = 'http://127.0.0.1:5000/predict';
+}
+
+// ============================================================
 // DATABASE CONNECTION
-// ============================================
+// ============================================================
+
 require_once __DIR__ . '/db_connect.php';
+
 if ($conn->connect_error) {
+
     echo json_encode([
         "success" => false,
         "error" => "Database connection failed"
     ]);
+
     exit();
 }
 
-// ============================================
+// ============================================================
 // GET USER
-// ============================================
-$user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
-if (!$user_id) {
-    $result = $conn->query("SELECT id FROM users LIMIT 1");
-    if ($result && $result->num_rows > 0) {
-        $row = $result->fetch_assoc();
-        $user_id = $row['id'];
-        $_SESSION['user_id'] = $user_id;
-    } else {
-        echo json_encode([
-            "success" => false,
-            "error" => "No users found"
-        ]);
-        $conn->close();
-        exit();
-    }
-}
+// ============================================================
 
-// ============================================
-// GET INPUT
-// ============================================
-$input = file_get_contents('php://input');
-$data = json_decode($input, true);
+$user_id = isset($_SESSION['user_id'])
+    ? intval($_SESSION['user_id'])
+    : 0;
 
-if (!$data) {
+if ($user_id <= 0) {
+
     echo json_encode([
         "success" => false,
-        "error" => "No data received"
+        "error" => "User session not found. Please login again."
     ]);
+
     $conn->close();
     exit();
 }
 
-// ============================================
-// EXTRACT DATA
-// ============================================
-$mode = isset($data['mode']) ? $data['mode'] : 'home';
-$input_type = isset($data['input_type']) ? $data['input_type'] : 'checkbox';
+// ============================================================
+// GET INPUT
+// ============================================================
 
-$symptoms = isset($data['symptoms']) ? $data['symptoms'] : '';
-if (is_array($symptoms)) {
-    $symptoms_arr = $symptoms;
-    $symptoms_str = implode(", ", $symptoms);
-} else {
-    $symptoms_str = $symptoms;
-    $symptoms_arr = array_map('trim', explode(',', $symptoms));
+$input = file_get_contents('php://input');
+$data = json_decode($input, true);
+
+if (!$data || !is_array($data)) {
+
+    echo json_encode([
+        "success" => false,
+        "error" => "No valid data received"
+    ]);
+
+    $conn->close();
+    exit();
 }
 
-$systolic_bp = isset($data['systolic_bp']) ? intval($data['systolic_bp']) : 0;
-$diastolic_bp = isset($data['diastolic_bp']) ? intval($data['diastolic_bp']) : 0;
-$proteinuria = isset($data['proteinuria']) ? $data['proteinuria'] : 'None';
-$gestational_age_weeks = isset($data['gestational_age_weeks']) ? floatval($data['gestational_age_weeks']) : 0;
-$maternal_age_yrs = isset($data['maternal_age_yrs']) ? intval($data['maternal_age_yrs']) : 0;
-$diabetes = isset($data['diabetes']) ? intval($data['diabetes']) : 0;
-$previous_pe = isset($data['previous_pe']) ? intval($data['previous_pe']) : 0;
-$multiple_pregnancy = isset($data['multiple_pregnancy']) ? intval($data['multiple_pregnancy']) : 0;
-$hypertension = isset($data['hypertension']) ? intval($data['hypertension']) : 0;
+// ============================================================
+// EXTRACT DATA
+// ============================================================
 
-// ============================================
+$mode = isset($data['mode'])
+    ? $data['mode']
+    : 'home';
+
+$input_type = isset($data['input_type'])
+    ? $data['input_type']
+    : 'checkbox';
+
+$symptoms = isset($data['symptoms'])
+    ? $data['symptoms']
+    : '';
+
+if (is_array($symptoms)) {
+
+    $symptoms_arr = $symptoms;
+    $symptoms_str = implode(", ", $symptoms);
+
+} else {
+
+    $symptoms_str = trim($symptoms);
+
+    $symptoms_arr = array_filter(
+        array_map(
+            'trim',
+            explode(',', $symptoms)
+        )
+    );
+}
+
+$systolic_bp = isset($data['systolic_bp'])
+    ? intval($data['systolic_bp'])
+    : 0;
+
+$diastolic_bp = isset($data['diastolic_bp'])
+    ? intval($data['diastolic_bp'])
+    : 0;
+
+$proteinuria = isset($data['proteinuria'])
+    ? $data['proteinuria']
+    : 'None';
+
+$gestational_age_weeks = isset($data['gestational_age_weeks'])
+    ? floatval($data['gestational_age_weeks'])
+    : 0;
+
+$maternal_age_yrs = isset($data['maternal_age_yrs'])
+    ? intval($data['maternal_age_yrs'])
+    : 0;
+
+$diabetes = isset($data['diabetes'])
+    ? intval($data['diabetes'])
+    : 0;
+
+$previous_pe = isset($data['previous_pe'])
+    ? intval($data['previous_pe'])
+    : 0;
+
+$multiple_pregnancy = isset($data['multiple_pregnancy'])
+    ? intval($data['multiple_pregnancy'])
+    : 0;
+
+$hypertension = isset($data['hypertension'])
+    ? intval($data['hypertension'])
+    : 0;
+
+// ============================================================
 // VALIDATE
-// ============================================
+// ============================================================
+
 if (empty($symptoms_str)) {
+
     echo json_encode([
         "success" => false,
         "error" => "Please add symptoms"
     ]);
+
     $conn->close();
     exit();
 }
 
-// Get profile values if needed
+// ============================================================
+// GET PROFILE INFORMATION
+// ============================================================
+
+// Gestational age
 if ($gestational_age_weeks <= 0) {
-    $stmt = $conn->prepare("SELECT last_period FROM user_profiles WHERE user_id = ?");
-    $stmt->bind_param("i", $user_id);
-    $stmt->execute();
-    $profile_result = $stmt->get_result();
-    if ($profile_result && $profile_result->num_rows > 0) {
-        $profile = $profile_result->fetch_assoc();
-        if ($profile['last_period']) {
-            $last_period = new DateTime($profile['last_period']);
-            $today = new DateTime();
-            $diff = $today->diff($last_period);
-            $gestational_age_weeks = floor($diff->days / 7);
+
+    $stmt = $conn->prepare(
+        "SELECT last_period
+         FROM user_profiles
+         WHERE user_id = ?
+         LIMIT 1"
+    );
+
+    if ($stmt) {
+
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+
+        $profile_result = $stmt->get_result();
+
+        if ($profile_result && $profile_result->num_rows > 0) {
+
+            $profile = $profile_result->fetch_assoc();
+
+            if (!empty($profile['last_period'])) {
+
+                try {
+
+                    $last_period = new DateTime(
+                        $profile['last_period']
+                    );
+
+                    $today = new DateTime();
+
+                    $diff = $today->diff(
+                        $last_period
+                    );
+
+                    $gestational_age_weeks =
+                        floor($diff->days / 7);
+
+                } catch (Exception $e) {
+                    // Keep default value
+                }
+            }
         }
+
+        $stmt->close();
     }
-    $stmt->close();
 }
 
+// Maternal age
 if ($maternal_age_yrs <= 0) {
-    $stmt = $conn->prepare("SELECT age FROM user_profiles WHERE user_id = ?");
+
+    $stmt = $conn->prepare(
+        "SELECT age
+         FROM user_profiles
+         WHERE user_id = ?
+         LIMIT 1"
+    );
+
+    if ($stmt) {
+
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+
+        $profile_result = $stmt->get_result();
+
+        if ($profile_result && $profile_result->num_rows > 0) {
+
+            $profile = $profile_result->fetch_assoc();
+
+            if (!empty($profile['age'])) {
+                $maternal_age_yrs =
+                    intval($profile['age']);
+            }
+        }
+
+        $stmt->close();
+    }
+}
+
+// Nearest health facility
+$facility = "your nearest health facility";
+
+$stmt = $conn->prepare(
+    "SELECT nearest_health
+     FROM user_profiles
+     WHERE user_id = ?
+     LIMIT 1"
+);
+
+if ($stmt) {
+
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
-    $profile_result = $stmt->get_result();
-    if ($profile_result && $profile_result->num_rows > 0) {
-        $profile = $profile_result->fetch_assoc();
-        if ($profile['age']) {
-            $maternal_age_yrs = intval($profile['age']);
+
+    $facility_result = $stmt->get_result();
+
+    if (
+        $facility_result &&
+        $facility_result->num_rows > 0
+    ) {
+
+        $facility_row =
+            $facility_result->fetch_assoc();
+
+        if (!empty($facility_row['nearest_health'])) {
+            $facility =
+                $facility_row['nearest_health'];
         }
     }
+
     $stmt->close();
 }
 
-// Get facility
-$facility = "your nearest health facility";
-$facility_query = $conn->query("SELECT nearest_health FROM user_profiles WHERE user_id = $user_id");
-if ($facility_query && $facility_query->num_rows > 0) {
-    $facility_row = $facility_query->fetch_assoc();
-    if ($facility_row['nearest_health']) {
-        $facility = $facility_row['nearest_health'];
-    }
-}
+// ============================================================
+// AI PREDICTION
+// ============================================================
 
-// ============================================
-// TRY AI PREDICTION (PRIMARY)
-// ============================================
 $risk = null;
 $level = null;
 $advice = null;
 $engine_used = 'AI NOT AVAILABLE';
 
-if ($use_ai && !empty($symptoms_str)) {
+if (
+    $use_ai &&
+    !empty($ai_api_url) &&
+    !empty($symptoms_str)
+) {
+
     try {
-        if (file_exists($python_exe) && file_exists($ai_script)) {
-            $ai_data = [
-                'mode' => $mode,
-                'input_type' => $input_type,
-                'symptoms' => $symptoms_arr,
-                'systolic_bp' => $systolic_bp,
-                'diastolic_bp' => $diastolic_bp,
-                'proteinuria' => $proteinuria,
-                'gestational_age_weeks' => $gestational_age_weeks,
-                'maternal_age_yrs' => $maternal_age_yrs,
-                'diabetes' => $diabetes,
-                'previous_pe' => $previous_pe,
-                'multiple_pregnancy' => $multiple_pregnancy,
-                'hypertension' => $hypertension,
-                'user_profile' => ['nearest_health' => $facility]
-            ];
 
-            $json_payload = json_encode($ai_data);
-            $b64_payload = base64_encode($json_payload);
-            
-            // Execute shell environment
-            $command = '"' . $python_exe . '" "' . $ai_script . '" ' . $b64_payload;
-            $output = shell_exec($command . " 2>&1");
-            
-            
-            if ($output !== null && trim($output) !== '') {
+        // ----------------------------------------------------
+        // Prepare data for Flask AI API
+        // ----------------------------------------------------
 
-    // Extract ONLY the JSON object from Python output
-    $jsonStart = strpos($output, '{');
+        $ai_data = [
 
-    if ($jsonStart !== false) {
+            "mode" => $mode,
 
-        $json = substr($output, $jsonStart);
+            "input_type" => $input_type,
 
-        $ai_response = json_decode($json, true);
+            "symptoms" => $symptoms_arr,
 
-        if (
-            json_last_error() === JSON_ERROR_NONE &&
-            isset($ai_response['success']) &&
-            $ai_response['success']
-        ) {
+            "systolic_bp" => $systolic_bp,
 
-            $risk = intval($ai_response['risk']);
-            $level = $ai_response['level'];
-            $advice = $ai_response['note'];
+            "diastolic_bp" => $diastolic_bp,
 
-            $engine_used = 'AI';
+            "proteinuria" => $proteinuria,
+
+            "gestational_age_weeks" =>
+                $gestational_age_weeks,
+
+            "maternal_age_yrs" =>
+                $maternal_age_yrs,
+
+            "diabetes" => $diabetes,
+
+            "previous_pe" => $previous_pe,
+
+            "multiple_pregnancy" =>
+                $multiple_pregnancy,
+
+            "hypertension" =>
+                $hypertension,
+
+            "user_profile" => [
+                "nearest_health" => $facility
+            ]
+        ];
+
+        $json_payload = json_encode(
+            $ai_data
+        );
+
+        if ($json_payload === false) {
+            throw new Exception(
+                "Unable to encode AI request"
+            );
+        }
+
+        // ----------------------------------------------------
+        // Send HTTP POST to Flask
+        // ----------------------------------------------------
+
+        $ch = curl_init($ai_api_url);
+
+        curl_setopt_array($ch, [
+
+            CURLOPT_POST => true,
+
+            CURLOPT_POSTFIELDS =>
+                $json_payload,
+
+            CURLOPT_HTTPHEADER => [
+
+                'Content-Type: application/json',
+
+                'Accept: application/json'
+            ],
+
+            CURLOPT_RETURNTRANSFER => true,
+
+            CURLOPT_CONNECTTIMEOUT => 10,
+
+            CURLOPT_TIMEOUT => 60,
+
+            CURLOPT_SSL_VERIFYPEER => true,
+
+            CURLOPT_SSL_VERIFYHOST => 2
+        ]);
+
+        $ai_output = curl_exec($ch);
+
+        $curl_error = curl_error($ch);
+
+        $http_code =
+            curl_getinfo(
+                $ch,
+                CURLINFO_HTTP_CODE
+            );
+
+        curl_close($ch);
+
+        // ----------------------------------------------------
+        // Check connection
+        // ----------------------------------------------------
+
+        if ($ai_output === false) {
+
+            error_log(
+                "AI API connection failed: " .
+                $curl_error
+            );
+
+        } elseif ($http_code < 200 || $http_code >= 300) {
+
+            error_log(
+                "AI API HTTP error " .
+                $http_code .
+                ": " .
+                $ai_output
+            );
 
         } else {
 
-            file_put_contents(
-                "ai_json_error.txt",
-                json_last_error_msg() . PHP_EOL . $json
-            );
+            // ------------------------------------------------
+            // Decode Flask response
+            // ------------------------------------------------
 
+            $ai_response =
+                json_decode(
+                    $ai_output,
+                    true
+                );
+
+            if (
+                is_array($ai_response) &&
+                isset($ai_response['success']) &&
+                $ai_response['success'] === true
+            ) {
+
+                $risk = intval(
+                    $ai_response['risk'] ?? 0
+                );
+
+                $level =
+                    $ai_response['level']
+                    ?? 'Unknown';
+
+                $advice =
+                    $ai_response['note']
+                    ?? $ai_response['message']
+                    ?? '';
+
+                $engine_used = 'AI';
+
+            } else {
+
+                error_log(
+                    "AI returned unsuccessful response: " .
+                    $ai_output
+                );
+            }
         }
 
-    }
-
-}
-        }
     } catch (Exception $e) {
-        // Drop down to fallback cleanly if structural exception surfaces
+
+        error_log(
+            "AI API exception: " .
+            $e->getMessage()
+        );
     }
 }
 
-// ============================================
-// PHP FALLBACK (If AI Failed or Dropped)
-// ============================================
+// ============================================================
+// PHP FALLBACK
+// ============================================================
+
 if ($engine_used !== 'AI') {
-    $ml_used = true;
+
     $engine_used = 'PHP Fallback';
+
     $risk = 0;
-    $s = strtolower($symptoms_str);
 
-    if (strpos($s, 'headache') !== false) $risk += 15;
-    if (strpos($s, 'blurred') !== false) $risk += 20;
-    if (strpos($s, 'swelling') !== false) $risk += 12;
-    if (strpos($s, 'abdominal') !== false) $risk += 12;
-    if (strpos($s, 'nausea') !== false) $risk += 8;
+    $s = strtolower(
+        $symptoms_str
+    );
 
-    if ($systolic_bp > 0 && $diastolic_bp > 0) {
-        if ($systolic_bp >= 160 || $diastolic_bp >= 110) $risk += 30;
-        elseif ($systolic_bp >= 140 || $diastolic_bp >= 90) $risk += 20;
-        elseif ($systolic_bp >= 130 || $diastolic_bp >= 85) $risk += 10;
+    // Symptoms
+    if (
+        strpos($s, 'headache') !== false
+    ) {
+        $risk += 15;
     }
 
-    if ($diabetes == 1) $risk += 8;
-    if ($previous_pe == 1) $risk += 10;
-    if ($multiple_pregnancy == 1) $risk += 8;
-    if ($hypertension == 1) $risk += 8;
-    if ($maternal_age_yrs >= 35) $risk += 8;
-    if ($gestational_age_weeks >= 20) $risk += 5;
+    if (
+        strpos($s, 'blurred') !== false
+    ) {
+        $risk += 20;
+    }
 
-    $risk = min($risk, 100);
+    if (
+        strpos($s, 'swelling') !== false
+    ) {
+        $risk += 12;
+    }
 
+    if (
+        strpos($s, 'abdominal') !== false
+    ) {
+        $risk += 12;
+    }
+
+    if (
+        strpos($s, 'nausea') !== false
+    ) {
+        $risk += 8;
+    }
+
+    // Blood pressure
+    if (
+        $systolic_bp > 0 &&
+        $diastolic_bp > 0
+    ) {
+
+        if (
+            $systolic_bp >= 160 ||
+            $diastolic_bp >= 110
+        ) {
+
+            $risk += 30;
+
+        } elseif (
+            $systolic_bp >= 140 ||
+            $diastolic_bp >= 90
+        ) {
+
+            $risk += 20;
+
+        } elseif (
+            $systolic_bp >= 130 ||
+            $diastolic_bp >= 85
+        ) {
+
+            $risk += 10;
+        }
+    }
+
+    // Other risk factors
+    if ($diabetes == 1) {
+        $risk += 8;
+    }
+
+    if ($previous_pe == 1) {
+        $risk += 10;
+    }
+
+    if ($multiple_pregnancy == 1) {
+        $risk += 8;
+    }
+
+    if ($hypertension == 1) {
+        $risk += 8;
+    }
+
+    if ($maternal_age_yrs >= 35) {
+        $risk += 8;
+    }
+
+    if ($gestational_age_weeks >= 20) {
+        $risk += 5;
+    }
+
+    $risk = min(
+        $risk,
+        100
+    );
+
+    // Determine risk level
     if ($risk < 25) {
+
         $level = "Low";
-        $advice = "LOW RISK\n\nRisk Score: {$risk}%\n\n✅ Continue routine antenatal care\n✅ Monitor blood pressure weekly\n✅ Watch for new symptoms\n\n📅 Next appointment: $facility";
+
+        $advice =
+            "LOW RISK\n\n" .
+            "Risk Score: {$risk}%\n\n" .
+            "Continue routine antenatal care\n" .
+            "Monitor blood pressure weekly\n" .
+            "Watch for new symptoms\n\n" .
+            "Next appointment: {$facility}";
+
     } elseif ($risk < 55) {
+
         $level = "Moderate";
-        $advice = "MODERATE RISK\n\nRisk Score: {$risk}%\n\n📋 Recommended Actions:\n• Check BP DAILY\n• Reduce salt intake\n• Rest on left side\n• Monitor warning signs\n\n🏥 Visit $facility within 2 weeks";
+
+        $advice =
+            "MODERATE RISK\n\n" .
+            "Risk Score: {$risk}%\n\n" .
+            "Recommended Actions:\n" .
+            "• Check BP DAILY\n" .
+            "• Reduce salt intake\n" .
+            "• Rest on left side\n" .
+            "• Monitor warning signs\n\n" .
+            "Visit {$facility} within 2 weeks";
+
     } else {
+
         $level = "High";
-        $advice = "HIGH RISK\n\nRisk Score: {$risk}%\n\n🚨 CRITICAL ACTIONS REQUIRED:\n• Seek immediate medical evaluation\n• Strict bed rest\n• Monitor vital signs\n\n🏥 Proceed to $facility immediately";
+
+        $advice =
+            "HIGH RISK\n\n" .
+            "Risk Score: {$risk}%\n\n" .
+            "CRITICAL ACTIONS REQUIRED:\n" .
+            "• Seek immediate medical evaluation\n" .
+            "• Strict bed rest\n" .
+            "• Monitor vital signs\n\n" .
+            "Proceed to {$facility} immediately";
     }
 }
 
-// ============================================
-// SAVE SCREENING RECORD TO DATABASE
-// ============================================
+// ============================================================
+// SAVE SCREENING RECORD
+// ============================================================
 
-$blood_pressure = $systolic_bp . "/" . $diastolic_bp;
+$blood_pressure =
+    $systolic_bp . "/" . $diastolic_bp;
 
+$stmt = $conn->prepare(
+    "INSERT INTO symptoms_records
+    (
+        user_id,
+        mode,
+        input_type,
+        symptoms,
+        blood_pressure,
+        systolic_bp,
+        diastolic_bp,
+        proteinuria,
+        gestational_age_weeks,
+        maternal_age_yrs,
+        diabetes,
+        previous_pe,
+        multiple_pregnancy,
+        hypertension,
+        risk,
+        risk_level,
+        engine_used,
+        message
+    )
+    VALUES
+    (
+        ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+    )"
+);
 
-// Prepare insert statement
-$stmt = $conn->prepare("
-INSERT INTO symptoms_records
-(
-    user_id,
-    mode,
-    input_type,
-    symptoms,
-    blood_pressure,
-    systolic_bp,
-    diastolic_bp,
-    proteinuria,
-    gestational_age_weeks,
-    maternal_age_yrs,
-    diabetes,
-    previous_pe,
-    multiple_pregnancy,
-    hypertension,
-    risk,
-    risk_level,
-    engine_used,
-    message
-)
-VALUES
-(
-?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
-)
-");
+if ($stmt) {
 
+    /*
+     * Correct types:
+     *
+     * i  user_id
+     * s  mode
+     * s  input_type
+     * s  symptoms
+     * s  blood_pressure
+     * i  systolic
+     * i  diastolic
+     * s  proteinuria
+     * d  gestational age
+     * i  maternal age
+     * i  diabetes
+     * i  previous PE
+     * i  multiple pregnancy
+     * i  hypertension
+     * i  risk
+     * s  level
+     * s  engine
+     * s  message
+     */
 
-if ($stmt === false) {
+    $stmt->bind_param(
+        "issssiisdiiiiiisss",
 
-    error_log("Database prepare error: " . $conn->error);
+        $user_id,
+        $mode,
+        $input_type,
+        $symptoms_str,
+        $blood_pressure,
+        $systolic_bp,
+        $diastolic_bp,
+        $proteinuria,
+        $gestational_age_weeks,
+        $maternal_age_yrs,
+        $diabetes,
+        $previous_pe,
+        $multiple_pregnancy,
+        $hypertension,
+        $risk,
+        $level,
+        $engine_used,
+        $advice
+    );
+
+    if (!$stmt->execute()) {
+
+        error_log(
+            "symptoms_records insert failed: " .
+            $stmt->error
+        );
+    }
+
+    $stmt->close();
 
 } else {
 
-
-$stmt->bind_param(
-    "issssiidiiiiiiisss",
-
-    $user_id,
-    $mode,
-    $input_type,
-    $symptoms_str,
-    $blood_pressure,
-    $systolic_bp,
-    $diastolic_bp,
-    $proteinuria,
-    $gestational_age_weeks,
-    $maternal_age_yrs,
-    $diabetes,
-    $previous_pe,
-    $multiple_pregnancy,
-    $hypertension,
-    $risk,
-    $level,
-    $engine_used,
-    $advice
-);
-
-
-
-if (!$stmt->execute()) {
-
     error_log(
-        "symptoms_records insert failed: "
-        . $stmt->error
+        "Database prepare error: " .
+        $conn->error
     );
-
 }
 
+// ============================================================
+// FORMAT RESPONSE FOR SCREEN6
+// ============================================================
 
-$stmt->close();
+if ($engine_used === 'AI') {
 
+    $prefix =
+        "🤖 AI Prediction\n\n";
+
+} else {
+
+    $prefix =
+        "📋 Rule-Based Prediction (Fallback)\n\n";
 }
 
-// ============================================
-// FORMAT OUTPUT SPECIFICALLY FOR SCREEN6 (CATCH-ALL)
-// ============================================
-$prefix = ($engine_used === 'AI') 
-    ? "═══════════════════════════════════\n  RISK ASSESSMENT RESULTS\n═══════════════════════════════════\n\n" 
-    : "═══════════════════════════════════\n  RISK ASSESSMENT RESULTS\n═══════════════════════════════════\n\n📋 Rule-Based Prediction (Fallback)\n\n";
+$final_display_message =
+    $prefix . $advice;
 
-$final_display_message = $prefix . $advice;
+// ============================================================
+// RETURN JSON
+// ============================================================
 
-// We flood the JSON response with the advice text using every common variable name.
-// This forces the frontend to find and display the text regardless of its internal script settings.
 echo json_encode([
-    "success"    => true,
-    "status"     => "success",
-    "engine"     => $engine_used,
-    "user_id"    => $user_id,
-    "risk"       => $risk,
-    "level"      => $level,
-    "mode"       => $mode,
-    
-    // Core structural parameters
-    "result"     => $final_display_message,
-    "advice"     => $advice,
-    
-    // Alternative frontend tracking keys
-    "note"       => $advice,
-    "prediction" => $advice,
-    "message"    => $advice,
-    "guidance"   => $advice,
-    "description"=> $advice,
-    "text"       => $advice
+
+    "success" => true,
+
+    "status" => "success",
+
+    "engine" => $engine_used,
+
+    "user_id" => $user_id,
+
+    "risk" => $risk,
+
+    "level" => $level,
+
+    "mode" => $mode,
+
+    "result" =>
+        $final_display_message,
+
+    "advice" =>
+        $advice,
+
+    "note" =>
+        $advice,
+
+    "prediction" =>
+        $advice,
+
+    "message" =>
+        $advice,
+
+    "guidance" =>
+        $advice,
+
+    "description" =>
+        $advice,
+
+    "text" =>
+        $advice
+
 ]);
 
 $conn->close();
+
 exit();
+
 ?>
