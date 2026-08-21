@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -460,13 +461,6 @@
             <div class="section-title">Where You Live</div>
 
             <div class="form-row">
-                <label>Country of Residence</label>
-                <select name="nationality" id="nationality" required>
-                    <option value="">Select your current country of residence</option>
-                </select>
-            </div>
-
-            <div class="form-row">
                 <label>District</label>
                 <select name="district" id="district" required>
                     <option value="">Select district</option>
@@ -604,7 +598,6 @@ async function loadUserData() {
             // Fill profile data if exists
             if (data.profile) {
                 document.getElementById('age').value = data.profile.age || '';
-                document.getElementById('nationality').value = data.profile.nationality || '';
                 document.getElementById('nearestHealth').value =
                     data.profile.nearest_health || '';
                 // Restore saved address selections after location lists load.
