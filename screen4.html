@@ -748,6 +748,9 @@ const progressBar =
 const progressPercent =
     document.getElementById('progressPercent');
 
+const locationStatus =
+    document.getElementById('locationStatus');
+
 const districtSelect =
     document.getElementById('district');
 
@@ -848,7 +851,7 @@ function loadUgandaDistricts() {
 
     if (districts.length) {
 
-        locationStatus.textContent =
+        if (locationStatus) locationStatus.textContent =
             'Select your district or city to continue.';
     }
 
@@ -900,7 +903,7 @@ districtSelect.addEventListener(
 
             countySelect.disabled = false;
 
-            locationStatus.textContent =
+            if (locationStatus) locationStatus.textContent =
                 'Now select the county or municipality.';
 
         } else if (directSubcounties.length) {
@@ -918,7 +921,7 @@ districtSelect.addEventListener(
 
             subCountySelect.disabled = false;
 
-            locationStatus.textContent =
+            if (locationStatus) locationStatus.textContent =
                 'Now select the division/sub county.';
 
         } else {
@@ -1174,6 +1177,347 @@ loadUgandaDistricts();
 async function updateNearestHealthFacility() {
 
     const input =
+        document.getElementById('nearestHealth');
+
+    const status =
+        document.getElementById('locationStatus');
+
+    const button =
+        document.getElementById('refreshFacilityBtn');
+
+    if (!input) {
+        return;
+    }
+
+    input.disabled = false;
+    input.readOnly = false;
+
+    if (!navigator.geolocation) {
+
+        enableManualFacilityEntry(
+            'Automatic location is not available. Please enter your nearest health facility manually.'
+        );
+
+        return;
+    }
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = '📍 Finding facility...';
+    }
+
+    if (status) {
+        status.textContent = '📍 Getting your current location...';
+    }
+
+    navigator.geolocation.getCurrentPosition(
+
+        async function(position) {
+
+            const latitude =
+                position.coords.latitude;
+
+            const longitude =
+                position.coords.longitude;
+
+            try {
+
+                /*
+                 * STEP 1:
+                 * Search MotherCare's Railway MySQL database.
+                 */
+                const dbResponse =
+                    await fetch(
+                        'nearest_health_facility.php?lat=' +
+                        encodeURIComponent(latitude) +
+                        '&lng=' +
+                        encodeURIComponent(longitude),
+                        {
+                            method: 'GET',
+                            cache: 'no-store'
+                        }
+                    );
+
+                if (!dbResponse.ok) {
+                    throw new Error(
+                        'MotherCare facility server returned HTTP ' +
+                        dbResponse.status
+                    );
+                }
+
+                const dbResult =
+                    await dbResponse.json();
+
+                if (
+                    dbResult.success &&
+                    dbResult.data &&
+                    dbResult.data.facility
+                ) {
+
+                    showNearestFacility(
+                        dbResult.data.facility,
+                        'MotherCare database',
+                        latitude,
+                        longitude
+                    );
+
+                    return;
+                }
+
+                /*
+                 * STEP 2:
+                 * DB has no coordinate-bearing facility nearby.
+                 * Use an external map-data fallback.
+                 */
+                await searchExternalNearbyFacilities(
+                    latitude,
+                    longitude
+                );
+
+            } catch (error) {
+
+                console.warn(
+                    'MotherCare DB facility lookup failed:',
+                    error
+                );
+
+                /*
+                 * If the Railway endpoint is unavailable,
+                 * still try the external mapping fallback.
+                 */
+                try {
+
+                    await searchExternalNearbyFacilities(
+                        latitude,
+                        longitude
+                    );
+
+                } catch (fallbackError) {
+
+                    console.warn(
+                        'External facility lookup failed:',
+                        fallbackError
+                    );
+
+                    enableManualFacilityEntry(
+                        'Automatic facility search failed. Please enter your nearest health facility manually.'
+                    );
+                }
+            }
+        },
+
+        function(error) {
+
+            console.warn(
+                'GPS location unavailable:',
+                error
+            );
+
+            enableManualFacilityEntry(
+                'Your location could not be detected. Please enter your nearest health facility manually.'
+            );
+        },
+
+        {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 120000
+        }
+    );
+}
+
+
+async function searchExternalNearbyFacilities(
+    latitude,
+    longitude
+) {
+
+    const radius = 15000;
+
+    const query = `
+[out:json][timeout:20];
+(
+  nwr["amenity"="hospital"](around:${radius},${latitude},${longitude});
+  nwr["amenity"="clinic"](around:${radius},${latitude},${longitude});
+  nwr["amenity"="doctors"](around:${radius},${latitude},${longitude});
+  nwr["healthcare"](around:${radius},${latitude},${longitude});
+);
+out center tags;
+`;
+
+    const endpoint =
+        'https://overpass-api.de/api/interpreter?data=' +
+        encodeURIComponent(query);
+
+    const response =
+        await fetch(
+            endpoint,
+            {
+                method: 'GET'
+            }
+        );
+
+    if (!response.ok) {
+        throw new Error(
+            'External mapping service returned HTTP ' +
+            response.status
+        );
+    }
+
+    const result =
+        await response.json();
+
+    const elements =
+        Array.isArray(result.elements)
+            ? result.elements
+            : [];
+
+    if (!elements.length) {
+        throw new Error(
+            'No mapped health facility was found nearby.'
+        );
+    }
+
+    function coordinatesOf(element) {
+
+        if (
+            typeof element.lat === 'number' &&
+            typeof element.lon === 'number'
+        ) {
+            return {
+                lat: element.lat,
+                lon: element.lon
+            };
+        }
+
+        if (
+            element.center &&
+            typeof element.center.lat === 'number' &&
+            typeof element.center.lon === 'number'
+        ) {
+            return {
+                lat: element.center.lat,
+                lon: element.center.lon
+            };
+        }
+
+        return null;
+    }
+
+
+    function distanceKm(
+        lat1,
+        lon1,
+        lat2,
+        lon2
+    ) {
+
+        const R = 6371;
+
+        const dLat =
+            (lat2 - lat1) *
+            Math.PI / 180;
+
+        const dLon =
+            (lon2 - lon1) *
+            Math.PI / 180;
+
+        const a =
+            Math.sin(dLat / 2) *
+            Math.sin(dLat / 2) +
+            Math.cos(
+                lat1 * Math.PI / 180
+            ) *
+            Math.cos(
+                lat2 * Math.PI / 180
+            ) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
+
+        return (
+            R *
+            2 *
+            Math.atan2(
+                Math.sqrt(a),
+                Math.sqrt(1 - a)
+            )
+        );
+    }
+
+
+    const facilities =
+        elements
+        .map(function(element) {
+
+            const c =
+                coordinatesOf(element);
+
+            if (!c) {
+                return null;
+            }
+
+            const tags =
+                element.tags || {};
+
+            return {
+                name:
+                    tags.name ||
+                    tags['name:en'] ||
+                    'Health Facility',
+
+                facility_type:
+                    tags.amenity ||
+                    tags.healthcare ||
+                    'Health Facility',
+
+                latitude:
+                    c.lat,
+
+                longitude:
+                    c.lon,
+
+                distance_km:
+                    distanceKm(
+                        latitude,
+                        longitude,
+                        c.lat,
+                        c.lon
+                    )
+            };
+        })
+        .filter(Boolean)
+        .sort(
+            function(a, b) {
+                return (
+                    a.distance_km -
+                    b.distance_km
+                );
+            }
+        );
+
+    if (!facilities.length) {
+        throw new Error(
+            'No usable facility was found.'
+        );
+    }
+
+    showNearestFacility(
+        facilities[0],
+        'map-data fallback',
+        latitude,
+        longitude
+    );
+}
+
+
+function showNearestFacility(
+    facility,
+    source,
+    userLatitude,
+    userLongitude
+) {
+
+    const input =
         document.getElementById(
             'nearestHealth'
         );
@@ -1192,430 +1536,196 @@ async function updateNearestHealthFacility() {
         return;
     }
 
-    /*
-     * Manual entry is ALWAYS allowed.
-     * We never make GPS a requirement for saving the profile.
-     */
-    input.readOnly = false;
+    input.value =
+        facility.facility_name ||
+        facility.name ||
+        'Health Facility';
+
     input.disabled = false;
+    input.readOnly = false;
 
-    if (
-        !navigator.geolocation
-    ) {
-
-        enableManualFacilityEntry(
-            'Automatic location is not available on this device. Please enter your nearest health facility manually.'
+    /*
+     * Save coordinates where possible.
+     */
+    let latField =
+        document.getElementById(
+            'nearestFacilityLatitude'
         );
 
-        return;
+    let lngField =
+        document.getElementById(
+            'nearestFacilityLongitude'
+        );
+
+    if (
+        input.form &&
+        !latField
+    ) {
+
+        latField =
+            document.createElement('input');
+
+        latField.type = 'hidden';
+        latField.name =
+            'nearest_facility_latitude';
+        latField.id =
+            'nearestFacilityLatitude';
+
+        input.form.appendChild(
+            latField
+        );
     }
 
-    if (button) {
+    if (
+        input.form &&
+        !lngField
+    ) {
 
-        button.disabled = true;
+        lngField =
+            document.createElement('input');
 
-        button.textContent =
-            '📍 Finding facility...';
+        lngField.type = 'hidden';
+        lngField.name =
+            'nearest_facility_longitude';
+        lngField.id =
+            'nearestFacilityLongitude';
+
+        input.form.appendChild(
+            lngField
+        );
+    }
+
+    if (latField) {
+        latField.value =
+            facility.latitude || '';
+    }
+
+    if (lngField) {
+        lngField.value =
+            facility.longitude || '';
+    }
+
+    const distance =
+        Number(
+            facility.distance_km
+        );
+
+    let distanceText =
+        '';
+
+    if (Number.isFinite(distance)) {
+
+        distanceText =
+            distance < 1
+                ? Math.round(
+                    distance * 1000
+                  ) + ' m'
+                : distance.toFixed(
+                    1
+                  ) + ' km';
     }
 
     if (status) {
 
         status.textContent =
-            '📍 Getting your current location...';
+            '📍 ' +
+            input.value +
+            (
+                distanceText
+                    ? ' — approximately ' +
+                      distanceText +
+                      ' away.'
+                    : ''
+            ) +
+            ' Source: ' +
+            source +
+            '. You can edit it.';
     }
 
-    navigator.geolocation.getCurrentPosition(
+    /*
+     * Provide a Google Maps navigation/search link.
+     * This does NOT require embedding a Google Maps API key.
+     */
+    let mapsButton =
+        document.getElementById(
+            'openFacilityMapBtn'
+        );
 
-        async function(position) {
+    if (!mapsButton) {
 
-            const latitude =
-                position.coords.latitude;
+        mapsButton =
+            document.createElement('button');
 
-            const longitude =
-                position.coords.longitude;
+        mapsButton.type = 'button';
+        mapsButton.id =
+            'openFacilityMapBtn';
 
-            try {
+        mapsButton.className =
+            'btn btn-secondary';
 
-                /*
-                 * Search nearby mapped healthcare facilities.
-                 *
-                 * This is deliberately treated as an OPTIONAL
-                 * automatic lookup. It is NOT required for saving.
-                 */
-                const radius =
-                    15000;
+        mapsButton.style.marginTop =
+            '6px';
 
-                const query = `
-[out:json][timeout:20];
-(
-  nwr["amenity"="hospital"](around:${radius},${latitude},${longitude});
-  nwr["amenity"="clinic"](around:${radius},${latitude},${longitude});
-  nwr["amenity"="doctors"](around:${radius},${latitude},${longitude});
-  nwr["healthcare"](around:${radius},${latitude},${longitude});
-);
-out center tags;
-`;
+        mapsButton.textContent =
+            '🗺️ Open in Google Maps';
 
-                const endpoint =
-                    'https://overpass-api.de/api/interpreter?data=' +
+        input.parentNode.appendChild(
+            mapsButton
+        );
+    }
+
+    mapsButton.onclick =
+        function() {
+
+            const name =
+                encodeURIComponent(
+                    input.value.trim()
+                );
+
+            let url;
+
+            if (
+                facility.latitude &&
+                facility.longitude
+            ) {
+
+                url =
+                    'https://www.google.com/maps/dir/?api=1' +
+                    '&origin=' +
                     encodeURIComponent(
-                        query
+                        userLatitude +
+                        ',' +
+                        userLongitude
+                    ) +
+                    '&destination=' +
+                    encodeURIComponent(
+                        facility.latitude +
+                        ',' +
+                        facility.longitude
                     );
 
-                const response =
-                    await fetch(
-                        endpoint,
-                        {
-                            method: 'GET'
-                        }
-                    );
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        'Mapping service returned HTTP ' +
-                        response.status
-                    );
-                }
-
-                const result =
-                    await response.json();
-
-                const elements =
-                    Array.isArray(
-                        result.elements
-                    )
-                        ? result.elements
-                        : [];
-
-                if (!elements.length) {
-
-                    throw new Error(
-                        'No mapped health facility was found nearby.'
-                    );
-                }
-
-                function getCoordinates(
-                    element
-                ) {
-
-                    if (
-                        typeof element.lat ===
-                            'number' &&
-                        typeof element.lon ===
-                            'number'
-                    ) {
-
-                        return {
-                            lat: element.lat,
-                            lon: element.lon
-                        };
-                    }
-
-                    if (
-                        element.center &&
-                        typeof element.center.lat ===
-                            'number' &&
-                        typeof element.center.lon ===
-                            'number'
-                    ) {
-
-                        return {
-                            lat:
-                                element.center.lat,
-
-                            lon:
-                                element.center.lon
-                        };
-                    }
-
-                    return null;
-                }
-
-
-                function calculateDistance(
-                    lat1,
-                    lon1,
-                    lat2,
-                    lon2
-                ) {
-
-                    const R =
-                        6371;
-
-                    const dLat =
-                        (
-                            lat2 -
-                            lat1
-                        ) *
-                        Math.PI /
-                        180;
-
-                    const dLon =
-                        (
-                            lon2 -
-                            lon1
-                        ) *
-                        Math.PI /
-                        180;
-
-                    const a =
-                        Math.sin(
-                            dLat / 2
-                        ) *
-                        Math.sin(
-                            dLat / 2
-                        ) +
-                        Math.cos(
-                            lat1 *
-                            Math.PI /
-                            180
-                        ) *
-                        Math.cos(
-                            lat2 *
-                            Math.PI /
-                            180
-                        ) *
-                        Math.sin(
-                            dLon / 2
-                        ) *
-                        Math.sin(
-                            dLon / 2
-                        );
-
-                    return (
-                        R *
-                        2 *
-                        Math.atan2(
-                            Math.sqrt(a),
-                            Math.sqrt(
-                                1 - a
-                            )
-                        )
-                    );
-                }
-
-
-                const facilities =
-                    elements
-                    .map(
-                        function(element) {
-
-                            const coords =
-                                getCoordinates(
-                                    element
-                                );
-
-                            if (!coords) {
-                                return null;
-                            }
-
-                            const tags =
-                                element.tags ||
-                                {};
-
-                            const name =
-                                tags.name ||
-                                tags['name:en'] ||
-                                tags.healthcare ||
-                                'Health Facility';
-
-                            return {
-
-                                name:
-                                    name,
-
-                                latitude:
-                                    coords.lat,
-
-                                longitude:
-                                    coords.lon,
-
-                                distance:
-                                    calculateDistance(
-                                        latitude,
-                                        longitude,
-                                        coords.lat,
-                                        coords.lon
-                                    )
-                            };
-                        }
-                    )
-                    .filter(
-                        Boolean
-                    )
-                    .sort(
-                        function(a, b) {
-
-                            return (
-                                a.distance -
-                                b.distance
-                            );
-                        }
-                    );
-
-                if (!facilities.length) {
-
-                    throw new Error(
-                        'No usable facility was found.'
-                    );
-                }
-
-                const nearest =
-                    facilities[0];
-
-                /*
-                 * Put the automatically found facility
-                 * directly into the same field the user can
-                 * edit manually.
-                 */
-                input.value =
-                    nearest.name;
-
-                input.readOnly =
-                    false;
-
-                /*
-                 * Save coordinates in hidden fields if
-                 * those fields are not already present.
-                 */
-                let latField =
-                    document.getElementById(
-                        'nearestFacilityLatitude'
-                    );
-
-                let lngField =
-                    document.getElementById(
-                        'nearestFacilityLongitude'
-                    );
-
-                if (
-                    input.form &&
-                    !latField
-                ) {
-
-                    latField =
-                        document.createElement(
-                            'input'
-                        );
-
-                    latField.type =
-                        'hidden';
-
-                    latField.name =
-                        'nearest_facility_latitude';
-
-                    latField.id =
-                        'nearestFacilityLatitude';
-
-                    input.form.appendChild(
-                        latField
-                    );
-                }
-
-                if (
-                    input.form &&
-                    !lngField
-                ) {
-
-                    lngField =
-                        document.createElement(
-                            'input'
-                        );
-
-                    lngField.type =
-                        'hidden';
-
-                    lngField.name =
-                        'nearest_facility_longitude';
-
-                    lngField.id =
-                        'nearestFacilityLongitude';
-
-                    input.form.appendChild(
-                        lngField
-                    );
-                }
-
-                if (latField) {
-
-                    latField.value =
-                        nearest.latitude;
-                }
-
-                if (lngField) {
-
-                    lngField.value =
-                        nearest.longitude;
-                }
-
-                const distanceText =
-                    nearest.distance < 1
-                        ? Math.round(
-                            nearest.distance *
-                            1000
-                        ) +
-                        ' m'
-                        : nearest.distance.toFixed(
-                            1
-                        ) +
-                        ' km';
-
-                if (status) {
-
-                    status.textContent =
-                        '📍 ' +
-                        nearest.name +
-                        ' — approximately ' +
-                        distanceText +
-                        ' away. You can edit it if needed.';
-                }
-
-                if (button) {
-
-                    button.disabled =
-                        false;
-
-                    button.textContent =
-                        '🔄 Update nearest facility';
-                }
-
-            } catch (error) {
-
-                console.error(
-                    'Automatic facility lookup failed:',
-                    error
-                );
-
-                enableManualFacilityEntry(
-                    'Automatic facility lookup failed. Please enter your nearest health facility manually.'
-                );
+            } else {
+
+                url =
+                    'https://www.google.com/maps/search/?api=1' +
+                    '&query=' +
+                    name;
             }
-        },
 
-        function(error) {
-
-            console.warn(
-                'Unable to obtain GPS location:',
-                error
+            window.open(
+                url,
+                '_blank',
+                'noopener,noreferrer'
             );
+        };
 
-            enableManualFacilityEntry(
-                'Your location could not be detected. Please enter your nearest health facility manually.'
-            );
-        },
+    if (button) {
 
-        {
-            enableHighAccuracy:
-                true,
+        button.disabled = false;
 
-            timeout:
-                15000,
-
-            maximumAge:
-                120000
-        }
-    );
+        button.textContent =
+            '🔄 Update nearest facility';
+    }
 }
 
 
@@ -1640,18 +1750,13 @@ function enableManualFacilityEntry(
 
     if (input) {
 
-        input.disabled =
-            false;
-
-        input.readOnly =
-            false;
+        input.disabled = false;
+        input.readOnly = false;
 
         input.placeholder =
             'Type nearest health facility';
 
-        /*
-         * Do NOT clear an existing facility value.
-         */
+        input.focus();
     }
 
     if (status) {
@@ -1663,8 +1768,7 @@ function enableManualFacilityEntry(
 
     if (button) {
 
-        button.disabled =
-            false;
+        button.disabled = false;
 
         button.textContent =
             '📍 Try automatic search again';
@@ -1672,9 +1776,6 @@ function enableManualFacilityEntry(
 }
 
 
-/*
- * Manual entry is accepted whenever the user types.
- */
 const nearestHealthInput =
     document.getElementById(
         'nearestHealth'
@@ -1682,10 +1783,10 @@ const nearestHealthInput =
 
 if (nearestHealthInput) {
 
-    nearestHealthInput.readOnly =
+    nearestHealthInput.disabled =
         false;
 
-    nearestHealthInput.disabled =
+    nearestHealthInput.readOnly =
         false;
 
     nearestHealthInput.addEventListener(
@@ -1710,9 +1811,6 @@ if (nearestHealthInput) {
 }
 
 
-/*
- * Button retries automatic location detection.
- */
 const facilityButton =
     document.getElementById(
         'refreshFacilityBtn'
@@ -1728,8 +1826,8 @@ if (facilityButton) {
 
 
 /*
- * Do not automatically force GPS on page load.
- * The field is available for manual entry immediately.
+ * The user can always enter a facility manually.
+ * Automatic lookup is only attempted when the button is pressed.
  */
 const initialFacilityStatus =
     document.getElementById(
@@ -1739,7 +1837,7 @@ const initialFacilityStatus =
 if (initialFacilityStatus) {
 
     initialFacilityStatus.textContent =
-        'You can enter the facility manually or try automatic location.';
+        'Enter a facility manually or use automatic search.';
 }
 
 /* Prepare selected human-readable locations before saving */
@@ -2224,7 +2322,6 @@ calculatePregnancyDetails();
 
 
 // Detect/update the nearest facility for the user's current location.
-updateNearestHealthFacility();
 </script>
 
 </body>
