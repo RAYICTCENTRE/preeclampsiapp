@@ -262,22 +262,10 @@
 
     <form id="profileForm" action="save_profile.php" method="POST">
         <div class="form-content">
-            <!-- Basic Info -->
+            <!-- Basic Information -->
             <div class="section-title">About You</div>
             
-            <div class="form-row">
-                <label>First Name</label>
-                <div class="readonly-value" id="displayFirstname">Loading...</div>
-            </div>
-            
-            <div class="form-row">
-                <label>Last Name</label>
-                <div class="readonly-value" id="displayLastname">Loading...</div>
-            </div>
-<div class="form-row">
-                <label>Email</label>
-                <div class="readonly-value" id="displayEmail">Loading...</div>
-            </div>
+
             
             <div class="form-row">
                 <label>Your Age</label>
@@ -302,21 +290,21 @@
 
             <div class="form-row">
                 <label>Sub County / Town Council</label>
-                <select name="subCounty" id="subCounty" disabled required>
+                <select name="subCounty" id="subCounty" required>
                     <option value="">Select district first</option>
                 </select>
             </div>
 
             <div class="form-row">
                 <label>Parish / Ward</label>
-                <select name="parish" id="parish" disabled required>
+                <select name="parish" id="parish" required>
                     <option value="">Select sub county first</option>
                 </select>
             </div>
 
             <div class="form-row">
                 <label>Village</label>
-                <select name="village" id="village" disabled required>
+                <select name="village" id="village" required>
                     <option value="">Select parish first</option>
                 </select>
             </div>
@@ -534,12 +522,67 @@ const locationStatus = document.getElementById('locationStatus');
 const refreshFacilityBtn = document.getElementById('refreshFacilityBtn');
 
 
+
+/* ==========================================================
+   LOCATION FALLBACK DATA
+   Allows the fields to remain usable even when the dynamic
+   location endpoint is temporarily unavailable.
+   ========================================================== */
+
+const ugandaDistrictFallback = [
+    "Abim","Adjumani","Agago","Alebtong","Amolatar","Amudat",
+    "Amuria","Amuru","Apac","Arua","Budaka","Bududa","Bugiri",
+    "Buikwe","Bukedea","Bukomansimbi","Bukwo","Bulambuli",
+    "Buliisa","Bundibugyo","Bunyangabu","Bushenyi","Busia",
+    "Butaleja","Butambala","Buvuma","Buyende","Dokolo","Gomba",
+    "Gulu","Hoima","Ibanda","Iganga","Isingiro","Jinja","Kaabong",
+    "Kabale","Kabarole","Kaberamaido","Kalaki","Kalangala","Kaliro",
+    "Kalungu","Kampala","Kamuli","Kamwenge","Kanungu","Kapchorwa",
+    "Kasese","Katakwi","Kayunga","Kazo","Kibaale","Kiboga","Kikuube",
+    "Kiruhura","Kisoro","Kitgum","Koboko","Kole","Kotido","Kumi",
+    "Kwania","Kween","Kyankwanzi","Kyegegwa","Kyenjojo","Kyotera",
+    "Lamwo","Lira","Luuka","Luwero","Lwengo","Lyantonde","Manafwa",
+    "Maracha","Masaka","Mayuge","Mbale","Mbarara","Mitooma","Mityana",
+    "Moroto","Moyo","Mpigi","Mubende","Mukono","Nakapiripirit",
+    "Nakasongola","Namayingo","Namisindwa","Namutumba","Napak","Nebbi",
+    "Ngora","Ntoroko","Ntungamo","Nwoya","Omoro","Otuke","Oyam","Pader",
+    "Pakwach","Pallisa","Rakai","Rubanda","Rubirizi","Rukiga","Rukungiri",
+    "Sembabule","Serere","Sheema","Sironko","Soroti","Tororo","Wakiso",
+    "Yumbe","Zombo"
+];
+
+function populateFallbackDistricts() {
+
+    districtSelect.innerHTML =
+        '<option value="">Select district</option>';
+
+    ugandaDistrictFallback.sort().forEach(function(name) {
+
+        const option =
+            document.createElement('option');
+
+        option.value = name;
+        option.textContent = name;
+
+        districtSelect.appendChild(option);
+    });
+
+    districtSelect.disabled = false;
+}
+
+/*
+ * Important:
+ * We don't lock the user out if the backend location
+ * endpoint fails. The user can still select/enter a
+ * location through the available controls.
+ */
+
 async function loadUgandaDistricts() {
 
     districtSelect.innerHTML =
         '<option value="">Loading districts...</option>';
 
-    districtSelect.disabled = true;
+    districtSelect.disabled = false;
 
     try {
 
@@ -562,7 +605,8 @@ async function loadUgandaDistricts() {
 
         result.data.forEach(function(item) {
 
-            const option = document.createElement('option');
+            const option =
+                document.createElement('option');
 
             option.value = item.name;
             option.textContent = item.name;
@@ -570,20 +614,16 @@ async function loadUgandaDistricts() {
             districtSelect.appendChild(option);
         });
 
-        districtSelect.disabled = false;
-
     } catch (error) {
 
-        console.error('District loading error:', error);
+        console.warn(
+            'Using district fallback:',
+            error
+        );
 
-        districtSelect.innerHTML =
-            '<option value="">Unable to load districts</option>';
-
-        locationStatus.textContent =
-            'Unable to load Uganda locations. Please try again.';
+        populateFallbackDistricts();
     }
 }
-
 
 async function loadLocationLevel(
     level,
@@ -595,7 +635,7 @@ async function loadLocationLevel(
     targetSelect.innerHTML =
         '<option value="">Loading...</option>';
 
-    targetSelect.disabled = true;
+    targetSelect.disabled = false;
 
     try {
 
@@ -623,7 +663,8 @@ async function loadLocationLevel(
 
         result.data.forEach(function(item) {
 
-            const option = document.createElement('option');
+            const option =
+                document.createElement('option');
 
             option.value = item.name;
             option.textContent = item.name;
@@ -635,15 +676,64 @@ async function loadLocationLevel(
 
     } catch (error) {
 
-        console.error(level + ' loading error:', error);
+        console.warn(
+            'Unable to load ' + level + ':',
+            error
+        );
 
-        targetSelect.innerHTML =
-            '<option value="">Unable to load locations</option>';
+        /*
+         * Do NOT permanently disable the field.
+         * Let the user enter a location manually if
+         * the location API is unavailable.
+         */
+        targetSelect.innerHTML = '';
 
-        targetSelect.disabled = true;
+        const manualOption =
+            document.createElement('option');
+
+        manualOption.value = '';
+        manualOption.textContent =
+            'Select or enter location';
+
+        targetSelect.appendChild(manualOption);
+
+        targetSelect.disabled = false;
+
+        /*
+         * Convert select into a text-entry field so the
+         * user is never blocked by the API.
+         */
+        const input =
+            document.createElement('input');
+
+        input.type = 'text';
+        input.name = targetSelect.name;
+        input.id = targetSelect.id;
+        input.placeholder = placeholder;
+        input.required = true;
+
+        targetSelect.replaceWith(input);
+
+        /*
+         * Update the variable references for subsequent
+         * cascading selections.
+         */
+        if (level === 'subcounties') {
+            window.subCountySelect =
+                document.getElementById('subCounty');
+        }
+
+        if (level === 'parishes') {
+            window.parishSelect =
+                document.getElementById('parish');
+        }
+
+        if (level === 'villages') {
+            window.villageSelect =
+                document.getElementById('village');
+        }
     }
 }
-
 
 /* District → Sub County/Town Council */
 districtSelect.addEventListener('change', async function() {
@@ -659,7 +749,7 @@ districtSelect.addEventListener('change', async function() {
     villageSelect.innerHTML =
         '<option value="">Select parish first</option>';
 
-    subCountySelect.disabled = true;
+    subCountySelect.disabled = false;
     parishSelect.disabled = true;
     villageSelect.disabled = true;
 
@@ -690,7 +780,7 @@ subCountySelect.addEventListener('change', async function() {
     villageSelect.innerHTML =
         '<option value="">Select parish first</option>';
 
-    parishSelect.disabled = true;
+    parishSelect.disabled = false;
     villageSelect.disabled = true;
 
     if (!subCounty) {
@@ -717,7 +807,7 @@ parishSelect.addEventListener('change', async function() {
     villageSelect.innerHTML =
         '<option value="">Select parish first</option>';
 
-    villageSelect.disabled = true;
+    villageSelect.disabled = false;
 
     if (!parish) {
         updateProgress();
@@ -966,40 +1056,206 @@ document.getElementById('profileForm').addEventListener(
 );
 
 
-// Calculate weeks pregnant and due date
-function calculateWeeksAndDueDate(lastPeriodDate) {
-    const lastPeriod = new Date(lastPeriodDate);
-    const today = new Date();
-    const diffTime = today - lastPeriod;
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    const weeks = Math.floor(diffDays / 7);
-    return weeks;
+// ==========================================================
+// PREGNANCY CALCULATION
+// ==========================================================
+
+function parseLocalDate(dateString) {
+
+    const parts =
+        dateString.split('-').map(Number);
+
+    if (parts.length !== 3) {
+        return null;
+    }
+
+    return new Date(
+        parts[0],
+        parts[1] - 1,
+        parts[2]
+    );
 }
 
-// Update due date and weeks pregnant
-document.getElementById("lastPeriod").addEventListener("change", function () {
-    if (this.value) {
-        const d = new Date(this.value);
-        d.setDate(d.getDate() + 280);
-        document.getElementById("expectedDelivery").value = d.toISOString().split('T')[0];
-        
-        const weeks = calculateWeeksAndDueDate(this.value);
-        if (weeks >= 0 && weeks <= 42) {
-            document.getElementById("weeksPregnant").value = weeks + " weeks";
-        } else if (weeks < 0) {
-            document.getElementById("weeksPregnant").value = "Please enter a valid date";
-        } else {
-            document.getElementById("weeksPregnant").value = "Overdue - please consult doctor";
-        }
-        updateProgress();
+
+function formatLocalDate(date) {
+
+    const year =
+        date.getFullYear();
+
+    const month =
+        String(date.getMonth() + 1)
+            .padStart(2, '0');
+
+    const day =
+        String(date.getDate())
+            .padStart(2, '0');
+
+    return year + '-' + month + '-' + day;
+}
+
+
+function calculatePregnancyDetails(lastPeriodDate) {
+
+    const lastPeriod =
+        parseLocalDate(lastPeriodDate);
+
+    if (!lastPeriod) {
+
+        return {
+            weeks: null,
+            days: null,
+            dueDate: null
+        };
     }
-});
+
+    const today =
+        new Date();
+
+    /*
+     * Strip the current time so that the calculation
+     * is based on calendar days rather than hours.
+     */
+    const todayOnly =
+        new Date(
+            today.getFullYear(),
+            today.getMonth(),
+            today.getDate()
+        );
+
+    const difference =
+        todayOnly.getTime() -
+        lastPeriod.getTime();
+
+    const days =
+        Math.floor(
+            difference /
+            (1000 * 60 * 60 * 24)
+        );
+
+    const weeks =
+        Math.floor(days / 7);
+
+    /*
+     * Standard estimated delivery:
+     * 280 days / 40 weeks from LMP.
+     */
+    const dueDate =
+        new Date(lastPeriod);
+
+    dueDate.setDate(
+        dueDate.getDate() + 280
+    );
+
+    return {
+        weeks: weeks,
+        days: days,
+        dueDate: dueDate
+    };
+}
+
+
+function updatePregnancyCalculation() {
+
+    const lastPeriodInput =
+        document.getElementById('lastPeriod');
+
+    const dueDateInput =
+        document.getElementById('expectedDelivery');
+
+    const weeksInput =
+        document.getElementById('weeksPregnant');
+
+    if (!lastPeriodInput.value) {
+
+        dueDateInput.value = '';
+        weeksInput.value = '';
+
+        updateProgress();
+
+        return;
+    }
+
+    const details =
+        calculatePregnancyDetails(
+            lastPeriodInput.value
+        );
+
+    if (
+        details.days === null ||
+        details.days < 0
+    ) {
+
+        dueDateInput.value =
+            details.dueDate
+                ? formatLocalDate(details.dueDate)
+                : '';
+
+        weeksInput.value =
+            'Invalid future date';
+
+        updateProgress();
+
+        return;
+    }
+
+    dueDateInput.value =
+        formatLocalDate(details.dueDate);
+
+    if (details.weeks <= 42) {
+
+        const remainingDays =
+            details.days % 7;
+
+        weeksInput.value =
+            details.weeks +
+            ' weeks ' +
+            remainingDays +
+            ' days';
+
+    } else {
+
+        weeksInput.value =
+            details.weeks +
+            ' weeks - please consult your healthcare provider';
+    }
+
+    updateProgress();
+}
+
+
+/*
+ * Recalculate immediately whenever the LMP changes.
+ */
+document.getElementById('lastPeriod')
+    .addEventListener(
+        'change',
+        updatePregnancyCalculation
+    );
+
+
+/*
+ * Also calculate while the user changes the date
+ * where supported by the browser.
+ */
+document.getElementById('lastPeriod')
+    .addEventListener(
+        'input',
+        updatePregnancyCalculation
+    );
 
 // Clear form
 document.getElementById('clear-btn').onclick = () => {
     form.reset();
     document.getElementById("expectedDelivery").value = "";
     document.getElementById("weeksPregnant").value = "";
+
+    /*
+     * Restore location controls after reset.
+     */
+    subCountySelect.disabled = true;
+    parishSelect.disabled = true;
+    villageSelect.disabled = true;
+
     updateProgress();
 };
 
