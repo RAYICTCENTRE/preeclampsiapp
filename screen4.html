@@ -274,29 +274,7 @@
                 <label>Last Name</label>
                 <div class="readonly-value" id="displayLastname">Loading...</div>
             </div>
-            
-            <div class="form-row">
-                <label>Phone Number</label>
-                <div class="phone-row">
-                    <select name="phoneCountryCode" id="phoneCountryCode">
-                        <option value="+256">🇺🇬 Uganda (+256)</option>
-                        <option value="+254">🇰🇪 Kenya (+254)</option>
-                        <option value="+255">🇹🇿 Tanzania (+255)</option>
-                        <option value="+211">🇸🇸 South Sudan (+211)</option>
-                        <option value="+250">🇷🇼 Rwanda (+250)</option>
-                        <option value="+243">🇨🇩 DR Congo (+243)</option>
-                        <option value="+252">🇸🇴 Somalia (+252)</option>
-                        <option value="+234">🇳🇬 Nigeria (+234)</option>
-                        <option value="+251">🇪🇹 Ethiopia (+251)</option>
-                        <option value="+1">🇺🇸 United States (+1)</option>
-                        <option value="+44">🇬🇧 United Kingdom (+44)</option>
-                        <option value="+27">🇿🇦 South Africa (+27)</option>
-                    </select>
-                    <input type="text" name="phone" id="phone" placeholder="Phone number">
-                </div>
-            </div>
-            
-            <div class="form-row">
+<div class="form-row">
                 <label>Email</label>
                 <div class="readonly-value" id="displayEmail">Loading...</div>
             </div>
@@ -308,36 +286,59 @@
 
             <!-- Address -->
             <div class="section-title">Where You Live</div>
-            
+
             <div class="form-row">
                 <label>Nationality</label>
-                <input type="text" name="nationality" id="nationality" placeholder="Your nationality">
+                <input type="text" name="nationality" id="nationality"
+                       value="Ugandan" placeholder="Your nationality">
             </div>
-            
+
             <div class="form-row">
                 <label>District</label>
-                <input type="text" name="district" id="district" placeholder="Your district">
+                <select name="district" id="district" required>
+                    <option value="">Select district</option>
+                </select>
             </div>
-            
+
             <div class="form-row">
-                <label>Sub County</label>
-                <input type="text" name="subCounty" id="subCounty" placeholder="Your sub county">
+                <label>Sub County / Town Council</label>
+                <select name="subCounty" id="subCounty" disabled required>
+                    <option value="">Select district first</option>
+                </select>
             </div>
-            
+
             <div class="form-row">
-                <label>Parish</label>
-                <input type="text" name="parish" id="parish" placeholder="Your parish">
+                <label>Parish / Ward</label>
+                <select name="parish" id="parish" disabled required>
+                    <option value="">Select sub county first</option>
+                </select>
             </div>
-            
+
             <div class="form-row">
                 <label>Village</label>
-                <input type="text" name="village" id="village" placeholder="Your village">
+                <select name="village" id="village" disabled required>
+                    <option value="">Select parish first</option>
+                </select>
             </div>
-            
+
             <div class="form-row">
-                <label>Nearest Clinic</label>
-                <input type="text" name="nearestHealth" id="nearestHealth" placeholder="Nearest health facility">
+                <label>Nearest Health Facility</label>
+                <div style="width:68%;">
+                    <input type="text" name="nearestHealth" id="nearestHealth"
+                           placeholder="Finding nearest facility..." readonly>
+                    <div id="locationStatus"
+                         style="font-size:10px;color:#64748b;margin-top:5px;">
+                        Your nearest health facility will be detected from your current location.
+                    </div>
+                    <button type="button" id="refreshFacilityBtn"
+                            style="margin-top:7px;padding:7px 10px;border:0;border-radius:8px;
+                                   background:#eef2ff;color:#3730a3;cursor:pointer;font-size:11px;">
+                        📍 Update nearest facility
+                    </button>
+                </div>
             </div>
+
+
 
             <!-- Emergency Contact -->
             <div class="section-title">Emergency Contact</div>
@@ -416,27 +417,52 @@ async function loadUserData() {
             document.getElementById('displayFirstname').innerHTML = data.firstname || '';
             document.getElementById('displayLastname').innerHTML = data.lastname || '';
             document.getElementById('displayEmail').innerHTML = data.email || '';
-            
-            // Handle phone number
-            if (data.phone) {
-                const phoneMatch = data.phone.match(/^(\+[0-9]+)(.*)$/);
-                if (phoneMatch) {
-                    document.getElementById('phoneCountryCode').value = phoneMatch[1];
-                    document.getElementById('phone').value = phoneMatch[2];
-                } else {
-                    document.getElementById('phone').value = data.phone;
-                }
-            }
+
             
             // Fill profile data if exists
             if (data.profile) {
                 document.getElementById('age').value = data.profile.age || '';
                 document.getElementById('nationality').value = data.profile.nationality || '';
-                document.getElementById('district').value = data.profile.district || '';
-                document.getElementById('subCounty').value = data.profile.sub_county || '';
-                document.getElementById('parish').value = data.profile.parish || '';
-                document.getElementById('village').value = data.profile.village || '';
-                document.getElementById('nearestHealth').value = data.profile.nearest_health || '';
+                document.getElementById('nearestHealth').value =
+                    data.profile.nearest_health || '';
+
+                // Restore cascading address selections.
+                if (data.profile.district) {
+                    districtSelect.value = data.profile.district;
+
+                    await loadLocationLevel(
+                        'subcounties',
+                        data.profile.district,
+                        subCountySelect,
+                        'Select sub county/town council'
+                    );
+
+                    if (data.profile.sub_county) {
+                        subCountySelect.value = data.profile.sub_county;
+
+                        await loadLocationLevel(
+                            'parishes',
+                            data.profile.sub_county,
+                            parishSelect,
+                            'Select parish/ward'
+                        );
+                    }
+
+                    if (data.profile.parish) {
+                        parishSelect.value = data.profile.parish;
+
+                        await loadLocationLevel(
+                            'villages',
+                            data.profile.parish,
+                            villageSelect,
+                            'Select village'
+                        );
+                    }
+
+                    if (data.profile.village) {
+                        villageSelect.value = data.profile.village;
+                    }
+                }
                 document.getElementById('kinName').value = data.profile.kin_name || '';
                 document.getElementById('kinRelationship').value = data.profile.kin_relationship || '';
                 
@@ -480,9 +506,465 @@ async function loadUserData() {
     }
 }
 
+
+/* ==========================================================
+   CASCADING UGANDA LOCATION SELECTIONS
+   ==========================================================
+
+   The page expects a backend endpoint named:
+       uganda_locations.php
+
+   Supported actions:
+       ?action=districts
+       ?action=subcounties&parent=...
+       ?action=parishes&parent=...
+       ?action=villages&parent=...
+
+   This keeps the district → sub-county → parish → village
+   choices controlled by your Uganda administrative data.
+========================================================== */
+
+const districtSelect = document.getElementById('district');
+const subCountySelect = document.getElementById('subCounty');
+const parishSelect = document.getElementById('parish');
+const villageSelect = document.getElementById('village');
+
+const nearestHealthInput = document.getElementById('nearestHealth');
+const locationStatus = document.getElementById('locationStatus');
+const refreshFacilityBtn = document.getElementById('refreshFacilityBtn');
+
+
+async function loadUgandaDistricts() {
+
+    districtSelect.innerHTML =
+        '<option value="">Loading districts...</option>';
+
+    districtSelect.disabled = true;
+
+    try {
+
+        const response = await fetch(
+            'uganda_locations.php?action=districts'
+        );
+
+        if (!response.ok) {
+            throw new Error('District service unavailable');
+        }
+
+        const result = await response.json();
+
+        if (!result.success || !Array.isArray(result.data)) {
+            throw new Error('Invalid district data');
+        }
+
+        districtSelect.innerHTML =
+            '<option value="">Select district</option>';
+
+        result.data.forEach(function(item) {
+
+            const option = document.createElement('option');
+
+            option.value = item.name;
+            option.textContent = item.name;
+
+            districtSelect.appendChild(option);
+        });
+
+        districtSelect.disabled = false;
+
+    } catch (error) {
+
+        console.error('District loading error:', error);
+
+        districtSelect.innerHTML =
+            '<option value="">Unable to load districts</option>';
+
+        locationStatus.textContent =
+            'Unable to load Uganda locations. Please try again.';
+    }
+}
+
+
+async function loadLocationLevel(
+    level,
+    parentName,
+    targetSelect,
+    placeholder
+) {
+
+    targetSelect.innerHTML =
+        '<option value="">Loading...</option>';
+
+    targetSelect.disabled = true;
+
+    try {
+
+        const response = await fetch(
+            'uganda_locations.php?action=' +
+            encodeURIComponent(level) +
+            '&parent=' +
+            encodeURIComponent(parentName)
+        );
+
+        if (!response.ok) {
+            throw new Error(level + ' service unavailable');
+        }
+
+        const result = await response.json();
+
+        if (!result.success || !Array.isArray(result.data)) {
+            throw new Error('Invalid ' + level + ' data');
+        }
+
+        targetSelect.innerHTML =
+            '<option value="">' +
+            placeholder +
+            '</option>';
+
+        result.data.forEach(function(item) {
+
+            const option = document.createElement('option');
+
+            option.value = item.name;
+            option.textContent = item.name;
+
+            targetSelect.appendChild(option);
+        });
+
+        targetSelect.disabled = false;
+
+    } catch (error) {
+
+        console.error(level + ' loading error:', error);
+
+        targetSelect.innerHTML =
+            '<option value="">Unable to load locations</option>';
+
+        targetSelect.disabled = true;
+    }
+}
+
+
+/* District → Sub County/Town Council */
+districtSelect.addEventListener('change', async function() {
+
+    const district = this.value;
+
+    subCountySelect.innerHTML =
+        '<option value="">Select district first</option>';
+
+    parishSelect.innerHTML =
+        '<option value="">Select sub county first</option>';
+
+    villageSelect.innerHTML =
+        '<option value="">Select parish first</option>';
+
+    subCountySelect.disabled = true;
+    parishSelect.disabled = true;
+    villageSelect.disabled = true;
+
+    if (!district) {
+        updateProgress();
+        return;
+    }
+
+    await loadLocationLevel(
+        'subcounties',
+        district,
+        subCountySelect,
+        'Select sub county/town council'
+    );
+
+    updateProgress();
+});
+
+
+/* Sub County/Town Council → Parish/Ward */
+subCountySelect.addEventListener('change', async function() {
+
+    const subCounty = this.value;
+
+    parishSelect.innerHTML =
+        '<option value="">Select sub county first</option>';
+
+    villageSelect.innerHTML =
+        '<option value="">Select parish first</option>';
+
+    parishSelect.disabled = true;
+    villageSelect.disabled = true;
+
+    if (!subCounty) {
+        updateProgress();
+        return;
+    }
+
+    await loadLocationLevel(
+        'parishes',
+        subCounty,
+        parishSelect,
+        'Select parish/ward'
+    );
+
+    updateProgress();
+});
+
+
+/* Parish/Ward → Village */
+parishSelect.addEventListener('change', async function() {
+
+    const parish = this.value;
+
+    villageSelect.innerHTML =
+        '<option value="">Select parish first</option>';
+
+    villageSelect.disabled = true;
+
+    if (!parish) {
+        updateProgress();
+        return;
+    }
+
+    await loadLocationLevel(
+        'villages',
+        parish,
+        villageSelect,
+        'Select village'
+    );
+
+    updateProgress();
+});
+
+
+/* ==========================================================
+   NEAREST HEALTH FACILITY
+   ==========================================================
+
+   The browser obtains the user's current coordinates.
+   Those coordinates are sent to:
+       nearest_health_facility.php
+
+   That endpoint should query your health-facility source.
+
+   Because the user's location can change, this function can
+   be called every time the profile/app is opened.
+========================================================== */
+
+async function updateNearestHealthFacility() {
+
+    if (!navigator.geolocation) {
+
+        locationStatus.textContent =
+            'Location services are not supported on this device.';
+
+        return;
+    }
+
+    nearestHealthInput.value = '';
+
+    locationStatus.textContent =
+        '📍 Getting your current location...';
+
+    refreshFacilityBtn.disabled = true;
+
+    navigator.geolocation.getCurrentPosition(
+
+        async function(position) {
+
+            const latitude =
+                position.coords.latitude;
+
+            const longitude =
+                position.coords.longitude;
+
+            locationStatus.textContent =
+                '🔎 Finding the nearest health facility...';
+
+            try {
+
+                const response = await fetch(
+                    'nearest_health_facility.php',
+                    {
+                        method: 'POST',
+
+                        headers: {
+                            'Content-Type':
+                                'application/json'
+                        },
+
+                        body: JSON.stringify({
+                            latitude: latitude,
+                            longitude: longitude
+                        })
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(
+                        'Health facility service unavailable'
+                    );
+                }
+
+                const result =
+                    await response.json();
+
+                if (
+                    result.success &&
+                    result.facility
+                ) {
+
+                    nearestHealthInput.value =
+                        result.facility.name;
+
+                    locationStatus.textContent =
+                        '📍 Nearest facility updated from your current location.';
+
+                    saveLocationCoordinates(
+                        latitude,
+                        longitude
+                    );
+
+                } else {
+
+                    locationStatus.textContent =
+                        'No nearby health facility was found.';
+
+                }
+
+            } catch (error) {
+
+                console.error(
+                    'Nearest facility error:',
+                    error
+                );
+
+                locationStatus.textContent =
+                    'Unable to find the nearest health facility. Please try again.';
+
+            } finally {
+
+                refreshFacilityBtn.disabled = false;
+
+                updateProgress();
+            }
+        },
+
+        function(error) {
+
+            refreshFacilityBtn.disabled = false;
+
+            console.error(
+                'Geolocation error:',
+                error
+            );
+
+            if (
+                error.code ===
+                error.PERMISSION_DENIED
+            ) {
+
+                locationStatus.textContent =
+                    'Location permission was denied. Allow location access to find your nearest facility.';
+
+            } else {
+
+                locationStatus.textContent =
+                    'Could not determine your location. Please try again.';
+            }
+        },
+
+        {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 300000
+        }
+    );
+}
+
+
+/* Save current coordinates as hidden fields */
+function saveLocationCoordinates(
+    latitude,
+    longitude
+) {
+
+    let latInput =
+        document.getElementById('currentLatitude');
+
+    let lngInput =
+        document.getElementById('currentLongitude');
+
+    if (!latInput) {
+
+        latInput =
+            document.createElement('input');
+
+        latInput.type = 'hidden';
+        latInput.name = 'current_latitude';
+        latInput.id = 'currentLatitude';
+
+        form.appendChild(latInput);
+    }
+
+    if (!lngInput) {
+
+        lngInput =
+            document.createElement('input');
+
+        lngInput.type = 'hidden';
+        lngInput.name = 'current_longitude';
+        lngInput.id = 'currentLongitude';
+
+        form.appendChild(lngInput);
+    }
+
+    latInput.value = latitude;
+    lngInput.value = longitude;
+}
+
+
+/* Manual nearest-facility refresh */
+refreshFacilityBtn.addEventListener(
+    'click',
+    updateNearestHealthFacility
+);
+
+
 const form = document.getElementById('profileForm');
 const progressBar = document.getElementById('progressBar');
 const progressPercent = document.getElementById('progressPercent');
+
+
+/* Normalize emergency contact phone before saving */
+document.getElementById('profileForm').addEventListener(
+    'submit',
+    function() {
+
+        const kinCode =
+            document.getElementById('kinCountryCode').value;
+
+        const kinInput =
+            document.getElementById('kinContact');
+
+        if (
+            kinInput &&
+            kinInput.value.trim() !== ''
+        ) {
+
+            let kinPhone =
+                kinInput.value.replace(/\D/g, '');
+
+            kinPhone =
+                kinPhone.replace(/^0+/, '');
+
+            if (kinPhone) {
+
+                kinInput.value =
+                    kinCode + kinPhone;
+            }
+        }
+    }
+);
+
 
 // Calculate weeks pregnant and due date
 function calculateWeeksAndDueDate(lastPeriodDate) {
@@ -554,8 +1036,13 @@ form.querySelectorAll('input, select').forEach(input => {
     }
 });
 
+loadUgandaDistricts();
+
 // Load user data when page loads
 loadUserData();
+
+// Detect/update the nearest facility for the user's current location.
+updateNearestHealthFacility();
 </script>
 
 </body>
