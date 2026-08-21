@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -423,6 +422,20 @@
         font-size: 12px !important;
         padding: 8px 9px !important;
     }
+}
+
+
+/* Nearest health facility: automatic lookup with manual fallback */
+#nearestHealth {
+    min-width: 0;
+}
+
+#nearestHealth:read-only {
+    background: #f8fafc;
+}
+
+#nearestHealth:not(:read-only) {
+    background: #fff;
 }
 
 </style>
@@ -1150,23 +1163,43 @@ loadUgandaDistricts();
 
 async function updateNearestHealthFacility() {
 
+    const input =
+        document.getElementById('nearestHealth');
+
+    const status =
+        document.getElementById('locationStatus');
+
+    const button =
+        document.getElementById('refreshFacilityBtn');
+
+    if (!input) {
+        return;
+    }
+
+    /*
+     * GPS/Google-style automatic lookup is optional.
+     * If it fails for ANY reason, the user can type/select
+     * the facility manually without being blocked.
+     */
     if (!navigator.geolocation) {
 
-        locationStatus.textContent =
-            'Location services are not supported on this device.';
+        enableManualFacilityEntry(
+            'Automatic location is not supported on this device. Enter your nearest health facility manually.'
+        );
 
         return;
     }
 
-    nearestHealthInput.value = '';
+    if (button) {
+        button.disabled = true;
+    }
 
-    locationStatus.textContent =
-        '📍 Getting your current location...';
-
-    refreshFacilityBtn.disabled = true;
+    if (status) {
+        status.textContent =
+            '📍 Finding your nearest health facility...';
+    }
 
     navigator.geolocation.getCurrentPosition(
-
         async function(position) {
 
             const latitude =
@@ -1175,22 +1208,14 @@ async function updateNearestHealthFacility() {
             const longitude =
                 position.coords.longitude;
 
-            locationStatus.textContent =
-                '🔎 Searching for nearby health facilities...';
-
             try {
 
                 /*
-                 * OpenStreetMap Overpass is used here instead of
-                 * simply guessing a facility from the district.
-                 *
-                 * We search several healthcare-related OSM tags,
-                 * then calculate the actual straight-line distance
-                 * from the user's GPS position and select the
-                 * closest result.
+                 * Keep the existing automatic facility service.
+                 * It is a mapping-data lookup rather than assuming
+                 * that the profile's original facility remains nearest.
                  */
-                const radius =
-                    15000;
+                const radius = 15000;
 
                 const query = `
 [out:json][timeout:25];
@@ -1212,7 +1237,7 @@ out center tags;
 
                 if (!response.ok) {
                     throw new Error(
-                        'Nearby health facility service unavailable'
+                        'Nearby facility service unavailable'
                     );
                 }
 
@@ -1225,19 +1250,17 @@ out center tags;
                         : [];
 
                 if (!elements.length) {
-
                     throw new Error(
-                        'No nearby facilities found'
+                        'No mapped facility found nearby'
                     );
                 }
 
-                function getCoordinates(element) {
+                function coordinatesOf(element) {
 
                     if (
                         typeof element.lat === 'number' &&
                         typeof element.lon === 'number'
                     ) {
-
                         return {
                             lat: element.lat,
                             lon: element.lon
@@ -1249,7 +1272,6 @@ out center tags;
                         typeof element.center.lat === 'number' &&
                         typeof element.center.lon === 'number'
                     ) {
-
                         return {
                             lat: element.center.lat,
                             lon: element.center.lon
@@ -1259,7 +1281,6 @@ out center tags;
                     return null;
                 }
 
-
                 function distanceKm(
                     lat1,
                     lon1,
@@ -1267,149 +1288,93 @@ out center tags;
                     lon2
                 ) {
 
-                    const earthRadius =
-                        6371;
+                    const earthRadius = 6371;
 
                     const dLat =
-                        (
-                            lat2 - lat1
-                        ) *
-                        Math.PI /
-                        180;
+                        (lat2 - lat1) *
+                        Math.PI / 180;
 
                     const dLon =
-                        (
-                            lon2 - lon1
-                        ) *
-                        Math.PI /
-                        180;
+                        (lon2 - lon1) *
+                        Math.PI / 180;
 
                     const a =
                         Math.sin(dLat / 2) *
                         Math.sin(dLat / 2) +
                         Math.cos(
-                            lat1 *
-                            Math.PI /
-                            180
+                            lat1 * Math.PI / 180
                         ) *
                         Math.cos(
-                            lat2 *
-                            Math.PI /
-                            180
+                            lat2 * Math.PI / 180
                         ) *
                         Math.sin(dLon / 2) *
                         Math.sin(dLon / 2);
 
-                    const c =
+                    return earthRadius *
                         2 *
                         Math.atan2(
                             Math.sqrt(a),
                             Math.sqrt(1 - a)
                         );
-
-                    return earthRadius * c;
                 }
-
 
                 const facilities =
                     elements
                     .map(function(element) {
 
-                        const coordinates =
-                            getCoordinates(element);
+                        const c =
+                            coordinatesOf(element);
 
-                        if (!coordinates) {
+                        if (!c) {
                             return null;
                         }
 
                         const tags =
                             element.tags || {};
 
-                        const name =
-                            tags.name ||
-                            tags['name:en'] ||
-                            tags.healthcare ||
-                            tags.amenity ||
-                            'Health Facility';
-
-                        const distance =
-                            distanceKm(
-                                latitude,
-                                longitude,
-                                coordinates.lat,
-                                coordinates.lon
-                            );
-
                         return {
-                            name: name,
-                            distance: distance,
-                            latitude:
-                                coordinates.lat,
-                            longitude:
-                                coordinates.lon,
-                            type:
-                                tags.healthcare ||
-                                tags.amenity ||
-                                ''
+                            name:
+                                tags.name ||
+                                tags['name:en'] ||
+                                'Health Facility',
+
+                            latitude: c.lat,
+                            longitude: c.lon,
+
+                            distance:
+                                distanceKm(
+                                    latitude,
+                                    longitude,
+                                    c.lat,
+                                    c.lon
+                                )
                         };
-
                     })
-                    .filter(Boolean);
-
+                    .filter(Boolean)
+                    .sort(
+                        function(a, b) {
+                            return a.distance -
+                                   b.distance;
+                        }
+                    );
 
                 if (!facilities.length) {
-
                     throw new Error(
-                        'No mappable facilities found'
+                        'No usable facility found'
                     );
                 }
-
-
-                /*
-                 * Closest facility first.
-                 */
-                facilities.sort(
-                    function(a, b) {
-                        return a.distance -
-                               b.distance;
-                    }
-                );
-
 
                 const nearest =
                     facilities[0];
 
-
-                nearestHealthInput.value =
+                input.value =
                     nearest.name;
-
-
-                const roundedDistance =
-                    nearest.distance < 1
-                        ? Math.round(
-                            nearest.distance * 1000
-                          ) + ' m'
-                        : nearest.distance.toFixed(1) + ' km';
-
-
-                locationStatus.textContent =
-                    '📍 ' +
-                    nearest.name +
-                    ' (' +
-                    roundedDistance +
-                    ' away)';
-
 
                 saveLocationCoordinates(
                     latitude,
                     longitude
                 );
 
-
-                /*
-                 * Keep the selected facility's coordinates
-                 * available for save_profile.php.
-                 */
                 let facilityLat =
                     document.getElementById(
                         'nearestFacilityLatitude'
@@ -1425,16 +1390,13 @@ out center tags;
                     facilityLat =
                         document.createElement('input');
 
-                    facilityLat.type =
-                        'hidden';
-
+                    facilityLat.type = 'hidden';
                     facilityLat.name =
                         'nearest_facility_latitude';
-
                     facilityLat.id =
                         'nearestFacilityLatitude';
 
-                    form.appendChild(
+                    input.form.appendChild(
                         facilityLat
                     );
                 }
@@ -1444,16 +1406,13 @@ out center tags;
                     facilityLng =
                         document.createElement('input');
 
-                    facilityLng.type =
-                        'hidden';
-
+                    facilityLng.type = 'hidden';
                     facilityLng.name =
                         'nearest_facility_longitude';
-
                     facilityLng.id =
                         'nearestFacilityLongitude';
 
-                    form.appendChild(
+                    input.form.appendChild(
                         facilityLng
                     );
                 }
@@ -1464,63 +1423,55 @@ out center tags;
                 facilityLng.value =
                     nearest.longitude;
 
+                const distanceText =
+                    nearest.distance < 1
+                        ? Math.round(
+                            nearest.distance * 1000
+                          ) + ' m'
+                        : nearest.distance.toFixed(1) +
+                          ' km';
+
+                if (status) {
+                    status.textContent =
+                        '📍 ' +
+                        nearest.name +
+                        ' (' +
+                        distanceText +
+                        ' away)';
+                }
+
+                input.readOnly = true;
+
             } catch (error) {
 
                 console.error(
-                    'Nearest facility error:',
+                    'Automatic facility lookup failed:',
                     error
                 );
 
-                locationStatus.textContent =
-                    'Unable to identify a nearby health facility. Tap "Update nearest facility" to try again.';
+                enableManualFacilityEntry(
+                    'Automatic facility lookup failed. Enter your nearest health facility manually.'
+                );
+            }
 
-            } finally {
-
-                refreshFacilityBtn.disabled =
-                    false;
-
-                updateProgress();
+            if (button) {
+                button.disabled = false;
             }
         },
 
         function(error) {
 
-            refreshFacilityBtn.disabled =
-                false;
-
-            console.error(
-                'Geolocation error:',
+            console.warn(
+                'GPS unavailable:',
                 error
             );
 
-            if (
-                error.code ===
-                error.PERMISSION_DENIED
-            ) {
+            enableManualFacilityEntry(
+                'Could not access your location. Enter your nearest health facility manually.'
+            );
 
-                locationStatus.textContent =
-                    'Location permission was denied. Allow location access to find your nearest health facility.';
-
-            } else if (
-                error.code ===
-                error.POSITION_UNAVAILABLE
-            ) {
-
-                locationStatus.textContent =
-                    'Your current location is unavailable. Please try again.';
-
-            } else if (
-                error.code ===
-                error.TIMEOUT
-            ) {
-
-                locationStatus.textContent =
-                    'Location request timed out. Please try again.';
-
-            } else {
-
-                locationStatus.textContent =
-                    'Could not determine your location. Please try again.';
+            if (button) {
+                button.disabled = false;
             }
         },
 
@@ -1531,6 +1482,82 @@ out center tags;
         }
     );
 }
+
+
+function enableManualFacilityEntry(message) {
+
+    const input =
+        document.getElementById('nearestHealth');
+
+    const status =
+        document.getElementById('locationStatus');
+
+    const button =
+        document.getElementById('refreshFacilityBtn');
+
+    if (input) {
+
+        input.readOnly = false;
+
+        input.disabled = false;
+
+        input.placeholder =
+            'Enter nearest health facility';
+
+        /*
+         * Do not erase an existing manually entered facility.
+         */
+        input.focus();
+    }
+
+    if (status) {
+
+        status.textContent =
+            '✏️ ' +
+            message;
+    }
+
+    if (button) {
+
+        button.disabled = false;
+
+        button.textContent =
+            '🔄 Try Automatic Search Again';
+    }
+}
+
+
+/*
+ * If the user starts typing manually, the manual value is accepted.
+ */
+const nearestHealthField =
+    document.getElementById('nearestHealth');
+
+if (nearestHealthField) {
+
+    nearestHealthField.addEventListener(
+        'input',
+        function() {
+
+            this.readOnly = false;
+
+            const status =
+                document.getElementById(
+                    'locationStatus'
+                );
+
+            if (
+                status &&
+                this.value.trim()
+            ) {
+
+                status.textContent =
+                    '✏️ Nearest facility entered manually.';
+            }
+        }
+    );
+}
+
 
 
 /* Save current coordinates as hidden fields */
@@ -1763,64 +1790,193 @@ function formatLocalDate(date) {
 }
 
 
-function calculatePregnancyDetails(lastPeriodDate) {
+function calculatePregnancyDetails() {
 
-    const lastPeriod =
-        parseLocalDate(lastPeriodDate);
+    const lmpInput =
+        document.getElementById('lastPeriod');
 
-    if (!lastPeriod) {
+    const eddInput =
+        document.getElementById('expectedDelivery');
 
-        return {
-            weeks: null,
-            days: null,
-            dueDate: null
-        };
+    const weeksInput =
+        document.getElementById('pregnancyWeeks');
+
+    const daysInput =
+        document.getElementById('pregnancyDays');
+
+    const pregnancyStatus =
+        document.getElementById('pregnancyStatus');
+
+    if (!lmpInput) {
+        return;
     }
 
-    const today =
-        new Date();
+    const raw =
+        lmpInput.value;
+
+    if (!raw) {
+
+        if (eddInput) eddInput.value = '';
+        if (weeksInput) weeksInput.value = '';
+        if (daysInput) daysInput.value = '';
+
+        if (pregnancyStatus) {
+            pregnancyStatus.textContent = '';
+        }
+
+        return;
+    }
 
     /*
-     * Strip the current time so that the calculation
-     * is based on calendar days rather than hours.
+     * Parse the date as a LOCAL calendar date.
+     * new Date("YYYY-MM-DD") can be interpreted as UTC and
+     * cause a one-day error in some time zones, so we avoid it.
      */
-    const todayOnly =
+    const parts =
+        raw.split('-').map(Number);
+
+    if (parts.length !== 3 ||
+        !parts[0] ||
+        !parts[1] ||
+        !parts[2]) {
+        return;
+    }
+
+    const year = parts[0];
+    const month = parts[1] - 1;
+    const day = parts[2];
+
+    const lmp =
         new Date(
-            today.getFullYear(),
-            today.getMonth(),
-            today.getDate()
+            year,
+            month,
+            day,
+            12, 0, 0, 0
         );
 
-    const difference =
-        todayOnly.getTime() -
-        lastPeriod.getTime();
+    if (isNaN(lmp.getTime())) {
+        return;
+    }
 
-    const days =
+    const todayRaw =
+        new Date();
+
+    const today =
+        new Date(
+            todayRaw.getFullYear(),
+            todayRaw.getMonth(),
+            todayRaw.getDate(),
+            12, 0, 0, 0
+        );
+
+    /*
+     * Prevent a future LMP date.
+     */
+    if (lmp > today) {
+
+        if (eddInput) eddInput.value = '';
+        if (weeksInput) weeksInput.value = '';
+        if (daysInput) daysInput.value = '';
+
+        if (pregnancyStatus) {
+            pregnancyStatus.textContent =
+                'Last menstrual period cannot be a future date.';
+        }
+
+        return;
+    }
+
+    /*
+     * Pregnancy length convention:
+     * 280 days (40 weeks) from the first day of LMP.
+     */
+    const pregnancyLengthDays = 280;
+
+    const elapsedMs =
+        today.getTime() -
+        lmp.getTime();
+
+    const elapsedDays =
         Math.floor(
-            difference /
-            (1000 * 60 * 60 * 24)
+            elapsedMs / 86400000
         );
 
     const weeks =
-        Math.floor(days / 7);
+        Math.floor(
+            elapsedDays / 7
+        );
 
-    /*
-     * Standard estimated delivery:
-     * 280 days / 40 weeks from LMP.
-     */
-    const dueDate =
-        new Date(lastPeriod);
+    const days =
+        elapsedDays % 7;
 
-    dueDate.setDate(
-        dueDate.getDate() + 280
+    const edd =
+        new Date(
+            lmp.getTime() +
+            pregnancyLengthDays * 86400000
+        );
+
+    function formatDate(date) {
+
+        const y =
+            date.getFullYear();
+
+        const m =
+            String(
+                date.getMonth() + 1
+            ).padStart(2, '0');
+
+        const d =
+            String(
+                date.getDate()
+            ).padStart(2, '0');
+
+        return y + '-' + m + '-' + d;
+    }
+
+    if (eddInput) {
+        eddInput.value =
+            formatDate(edd);
+    }
+
+    if (weeksInput) {
+        weeksInput.value =
+            weeks;
+    }
+
+    if (daysInput) {
+        daysInput.value =
+            days;
+    }
+
+    if (pregnancyStatus) {
+
+        pregnancyStatus.textContent =
+            'Gestational age: ' +
+            weeks +
+            ' weeks ' +
+            days +
+            ' days';
+    }
+}
+
+const lastPeriodField =
+    document.getElementById('lastPeriod');
+
+if (lastPeriodField) {
+
+    lastPeriodField.addEventListener(
+        'input',
+        calculatePregnancyDetails
     );
 
-    return {
-        weeks: weeks,
-        days: days,
-        dueDate: dueDate
-    };
+    lastPeriodField.addEventListener(
+        'change',
+        calculatePregnancyDetails
+    );
 }
+
+calculatePregnancyDetails();
+
 
 
 function updatePregnancyCalculation() {
