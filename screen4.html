@@ -240,7 +240,33 @@
                 width: 100%;
             }
         }
-    </style>
+    
+/* Profile action buttons: single horizontal row */
+.profile-actions {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    margin-top: 14px;
+}
+
+.profile-actions button {
+    flex: 1;
+    margin-top: 0;
+}
+
+@media (max-width: 420px) {
+    .profile-actions {
+        gap: 7px;
+    }
+
+    .profile-actions button {
+        padding-left: 7px;
+        padding-right: 7px;
+        font-size: 13px;
+    }
+}
+
+</style>
 </head>
 <body>
 
@@ -289,9 +315,16 @@
             </div>
 
             <div class="form-row">
-                <label>Sub County / Town Council</label>
+                <label>County / Municipality</label>
+                <select name="county" id="county" required>
+                    <option value="">Select district or city first</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <label>Sub County / Town Council / Division</label>
                 <select name="subCounty" id="subCounty" required>
-                    <option value="">Select district first</option>
+                    <option value="">Select county/municipality first</option>
                 </select>
             </div>
 
@@ -383,9 +416,11 @@
 
             <!-- Buttons -->
             <div class="button-group">
+                <div class="profile-actions">
                 <button type="submit" class="btn btn-primary">Save Profile</button>
                 <button type="button" id="clear-btn" class="btn btn-warning">Clear</button>
                 <button type="button" id="cancel-btn" class="btn btn-danger">Cancel</button>
+            </div>
             </div>
         </div>
     </form>
@@ -413,44 +448,185 @@ async function loadUserData() {
                 document.getElementById('nationality').value = data.profile.nationality || '';
                 document.getElementById('nearestHealth').value =
                     data.profile.nearest_health || '';
+                // Restore saved cascading address selections by name.
+                async function restoreLocationSelection() {
 
-                // Restore cascading address selections.
-                if (data.profile.district) {
-                    districtSelect.value = data.profile.district;
+                    function selectByName(select, name) {
 
-                    await loadLocationLevel(
-                        'subcounties',
-                        data.profile.district,
-                        subCountySelect,
-                        'Select sub county/town council'
+                        if (!select || !name) {
+                            return false;
+                        }
+
+                        const wanted =
+                            name.trim().toLowerCase();
+
+                        for (
+                            let i = 0;
+                            i < select.options.length;
+                            i++
+                        ) {
+
+                            const option =
+                                select.options[i];
+
+                            const optionName =
+                                (
+                                    option.dataset.name ||
+                                    option.textContent ||
+                                    ''
+                                ).trim().toLowerCase();
+
+                            if (optionName === wanted) {
+
+                                select.selectedIndex = i;
+
+                                return true;
+                            }
+                        }
+
+                        return false;
+                    }
+
+                    if (!data.profile.district) {
+                        return;
+                    }
+
+                    /*
+                     * District/city.
+                     */
+                    const districtFound =
+                        selectByName(
+                            districtSelect,
+                            data.profile.district
+                        );
+
+                    if (!districtFound) {
+                        return;
+                    }
+
+                    districtSelect.dispatchEvent(
+                        new Event('change')
                     );
 
+                    /*
+                     * Wait for counties/municipalities.
+                     */
+                    let attempts = 0;
+
+                    while (
+                        countySelect.disabled &&
+                        attempts < 30
+                    ) {
+
+                        await new Promise(
+                            resolve =>
+                                setTimeout(resolve, 150)
+                        );
+
+                        attempts++;
+                    }
+
+                    if (data.profile.county) {
+
+                        selectByName(
+                            countySelect,
+                            data.profile.county
+                        );
+
+                        countySelect.dispatchEvent(
+                            new Event('change')
+                        );
+
+                        attempts = 0;
+
+                        while (
+                            subCountySelect.disabled &&
+                            attempts < 30
+                        ) {
+
+                            await new Promise(
+                                resolve =>
+                                    setTimeout(resolve, 150)
+                            );
+
+                            attempts++;
+                        }
+                    }
+
+                    /*
+                     * Subcounty/town council/division.
+                     */
                     if (data.profile.sub_county) {
-                        subCountySelect.value = data.profile.sub_county;
 
-                        await loadLocationLevel(
-                            'parishes',
-                            data.profile.sub_county,
-                            parishSelect,
-                            'Select parish/ward'
+                        selectByName(
+                            subCountySelect,
+                            data.profile.sub_county
                         );
+
+                        subCountySelect.dispatchEvent(
+                            new Event('change')
+                        );
+
+                        attempts = 0;
+
+                        while (
+                            parishSelect.disabled &&
+                            attempts < 30
+                        ) {
+
+                            await new Promise(
+                                resolve =>
+                                    setTimeout(resolve, 150)
+                            );
+
+                            attempts++;
+                        }
                     }
 
+                    /*
+                     * Parish/ward.
+                     */
                     if (data.profile.parish) {
-                        parishSelect.value = data.profile.parish;
 
-                        await loadLocationLevel(
-                            'villages',
-                            data.profile.parish,
-                            villageSelect,
-                            'Select village'
+                        selectByName(
+                            parishSelect,
+                            data.profile.parish
                         );
+
+                        parishSelect.dispatchEvent(
+                            new Event('change')
+                        );
+
+                        attempts = 0;
+
+                        while (
+                            villageSelect.disabled &&
+                            attempts < 30
+                        ) {
+
+                            await new Promise(
+                                resolve =>
+                                    setTimeout(resolve, 150)
+                            );
+
+                            attempts++;
+                        }
                     }
 
+                    /*
+                     * Village/cell/zone.
+                     */
                     if (data.profile.village) {
-                        villageSelect.value = data.profile.village;
+
+                        selectByName(
+                            villageSelect,
+                            data.profile.village
+                        );
                     }
                 }
+
+                await restoreLocationSelection();
+
                 document.getElementById('kinName').value = data.profile.kin_name || '';
                 document.getElementById('kinRelationship').value = data.profile.kin_relationship || '';
                 
@@ -513,6 +689,7 @@ async function loadUserData() {
 ========================================================== */
 
 const districtSelect = document.getElementById('district');
+const countySelect = document.getElementById('county');
 const subCountySelect = document.getElementById('subCounty');
 const parishSelect = document.getElementById('parish');
 const villageSelect = document.getElementById('village');
@@ -580,80 +757,220 @@ function populateFallbackDistricts() {
 async function loadUgandaDistricts() {
 
     districtSelect.innerHTML =
-        '<option value="">Loading districts...</option>';
+        '<option value="">Loading Uganda locations...</option>';
 
-    districtSelect.disabled = false;
+    districtSelect.disabled = true;
 
     try {
 
-        const response = await fetch(
-            'uganda_locations.php?action=districts'
-        );
+        const [districtResponse, cityResponse] =
+            await Promise.all([
+                fetch('https://uganda-omega.vercel.app/api/districts'),
+                fetch('https://uganda-omega.vercel.app/api/cities')
+            ]);
 
-        if (!response.ok) {
-            throw new Error('District service unavailable');
+        if (!districtResponse.ok || !cityResponse.ok) {
+            throw new Error('Location API unavailable');
         }
 
-        const result = await response.json();
+        const districtResult =
+            await districtResponse.json();
 
-        if (!result.success || !Array.isArray(result.data)) {
-            throw new Error('Invalid district data');
+        const cityResult =
+            await cityResponse.json();
+
+        const districts =
+            Array.isArray(districtResult)
+                ? districtResult
+                : (districtResult.data || []);
+
+        const cities =
+            Array.isArray(cityResult)
+                ? cityResult
+                : (cityResult.data || []);
+
+        const allLocations = [];
+
+        districts.forEach(function(item) {
+
+            allLocations.push({
+                id: item.id,
+                name: item.name,
+                type: 'District'
+            });
+        });
+
+        cities.forEach(function(item) {
+
+            allLocations.push({
+                id: item.id,
+                name: item.name,
+                type: 'City'
+            });
+        });
+
+        if (!allLocations.length) {
+            throw new Error('No locations returned');
         }
+
+        allLocations.sort(function(a, b) {
+
+            return a.name.localeCompare(
+                b.name,
+                undefined,
+                { sensitivity: 'base' }
+            );
+        });
 
         districtSelect.innerHTML =
-            '<option value="">Select district</option>';
+            '<option value="">Select district or city</option>';
 
-        result.data.forEach(function(item) {
+        allLocations.forEach(function(item) {
 
             const option =
                 document.createElement('option');
 
-            option.value = item.name;
-            option.textContent = item.name;
+            /*
+             * Store the real API ID, not just the name.
+             * This prevents similarly named locations from
+             * being mixed up.
+             */
+            option.value = item.id;
+
+            option.dataset.name = item.name;
+            option.dataset.type = item.type;
+
+            option.textContent =
+                item.name + ' (' + item.type + ')';
 
             districtSelect.appendChild(option);
         });
 
+        districtSelect.disabled = false;
+
     } catch (error) {
 
-        console.warn(
-            'Using district fallback:',
+        console.error(
+            'Current Uganda location API error:',
             error
         );
 
-        populateFallbackDistricts();
+        districtSelect.innerHTML =
+            '<option value="">Unable to load locations</option>';
+
+        districtSelect.disabled = false;
+
+        locationStatus.textContent =
+            'Unable to load the latest Uganda location list. Please refresh and try again.';
     }
 }
 
 async function loadLocationLevel(
     level,
-    parentName,
+    parentId,
     targetSelect,
     placeholder
 ) {
 
     targetSelect.innerHTML =
-        '<option value="">Loading...</option>';
+        '<option value="">' +
+        placeholder +
+        '</option>';
 
-    targetSelect.disabled = false;
+    targetSelect.disabled = true;
+
+    if (!parentId) {
+        targetSelect.disabled = false;
+        return;
+    }
 
     try {
 
-        const response = await fetch(
-            'uganda_locations.php?action=' +
-            encodeURIComponent(level) +
-            '&parent=' +
-            encodeURIComponent(parentName)
-        );
+        let endpoint = '';
 
-        if (!response.ok) {
-            throw new Error(level + ' service unavailable');
+        /*
+         * Current API hierarchy:
+         *
+         * district/city → /api/units/:id
+         * county       → /api/counties/:id/subcounties
+         * subcounty    → /api/subcounties/:id/parishes
+         * parish       → /api/units/:id
+         */
+
+        if (level === 'children') {
+
+            endpoint =
+                'https://uganda-omega.vercel.app/api/units/' +
+                encodeURIComponent(parentId);
+
+        } else if (level === 'subcounties') {
+
+            endpoint =
+                'https://uganda-omega.vercel.app/api/counties/' +
+                encodeURIComponent(parentId) +
+                '/subcounties';
+
+        } else if (level === 'parishes') {
+
+            endpoint =
+                'https://uganda-omega.vercel.app/api/subcounties/' +
+                encodeURIComponent(parentId) +
+                '/parishes';
+
+        } else {
+
+            throw new Error(
+                'Unknown location level: ' + level
+            );
         }
 
-        const result = await response.json();
+        const response =
+            await fetch(endpoint);
 
-        if (!result.success || !Array.isArray(result.data)) {
-            throw new Error('Invalid ' + level + ' data');
+        if (!response.ok) {
+            throw new Error(
+                'Location request failed: ' +
+                response.status
+            );
+        }
+
+        const result =
+            await response.json();
+
+        /*
+         * /api/units/:id returns a unit object with direct
+         * children. Other endpoints return arrays.
+         */
+        let records = [];
+
+        if (Array.isArray(result)) {
+
+            records = result;
+
+        } else if (Array.isArray(result.data)) {
+
+            records = result.data;
+
+        } else if (Array.isArray(result.children)) {
+
+            records = result.children;
+
+        } else if (
+            result.unit &&
+            Array.isArray(result.unit.children)
+        ) {
+
+            records = result.unit.children;
+        }
+
+        if (!records.length) {
+
+            targetSelect.innerHTML =
+                '<option value="">No locations found</option>';
+
+            targetSelect.disabled = false;
+
+            return;
         }
 
         targetSelect.innerHTML =
@@ -661,13 +978,46 @@ async function loadLocationLevel(
             placeholder +
             '</option>';
 
-        result.data.forEach(function(item) {
+        records.sort(function(a, b) {
+
+            const aName =
+                a.name ||
+                a.name_en ||
+                a.label ||
+                '';
+
+            const bName =
+                b.name ||
+                b.name_en ||
+                b.label ||
+                '';
+
+            return aName.localeCompare(
+                bName,
+                undefined,
+                { sensitivity: 'base' }
+            );
+        });
+
+        records.forEach(function(item) {
 
             const option =
                 document.createElement('option');
 
-            option.value = item.name;
-            option.textContent = item.name;
+            const itemId =
+                item.id ||
+                item.uuid ||
+                item.value;
+
+            const itemName =
+                item.name ||
+                item.name_en ||
+                item.label;
+
+            option.value = itemId;
+            option.dataset.name = itemName;
+
+            option.textContent = itemName;
 
             targetSelect.appendChild(option);
         });
@@ -676,94 +1026,290 @@ async function loadLocationLevel(
 
     } catch (error) {
 
-        console.warn(
-            'Unable to load ' + level + ':',
+        console.error(
+            'Location loading error:',
             error
         );
 
+        targetSelect.innerHTML =
+            '<option value="">Unable to load locations</option>';
+
         /*
-         * Do NOT permanently disable the field.
-         * Let the user enter a location manually if
-         * the location API is unavailable.
+         * Keep the field available rather than locking
+         * the entire profile form.
          */
-        targetSelect.innerHTML = '';
-
-        const manualOption =
-            document.createElement('option');
-
-        manualOption.value = '';
-        manualOption.textContent =
-            'Select or enter location';
-
-        targetSelect.appendChild(manualOption);
-
         targetSelect.disabled = false;
 
-        /*
-         * Convert select into a text-entry field so the
-         * user is never blocked by the API.
-         */
-        const input =
-            document.createElement('input');
-
-        input.type = 'text';
-        input.name = targetSelect.name;
-        input.id = targetSelect.id;
-        input.placeholder = placeholder;
-        input.required = true;
-
-        targetSelect.replaceWith(input);
-
-        /*
-         * Update the variable references for subsequent
-         * cascading selections.
-         */
-        if (level === 'subcounties') {
-            window.subCountySelect =
-                document.getElementById('subCounty');
-        }
-
-        if (level === 'parishes') {
-            window.parishSelect =
-                document.getElementById('parish');
-        }
-
-        if (level === 'villages') {
-            window.villageSelect =
-                document.getElementById('village');
-        }
+        locationStatus.textContent =
+            'Unable to load this location level. Please check your connection and try again.';
     }
 }
 
 /* District → Sub County/Town Council */
 districtSelect.addEventListener('change', async function() {
 
-    const district = this.value;
+    const selected =
+        this.options[this.selectedIndex];
+
+    const locationId =
+        this.value;
+
+    const locationName =
+        selected.dataset.name || '';
+
+    this.dataset.selectedName =
+        locationName;
+
+    countySelect.innerHTML =
+        '<option value="">Select county/municipality</option>';
 
     subCountySelect.innerHTML =
-        '<option value="">Select district first</option>';
+        '<option value="">Select county/municipality first</option>';
+
+    parishSelect.innerHTML =
+        '<option value="">Select sub county/town council/division first</option>';
+
+    villageSelect.innerHTML =
+        '<option value="">Select parish/ward first</option>';
+
+    countySelect.disabled = true;
+    subCountySelect.disabled = true;
+    parishSelect.disabled = true;
+    villageSelect.disabled = true;
+
+    if (!locationId) {
+        updateProgress();
+        return;
+    }
+
+    try {
+
+        const response =
+            await fetch(
+                'https://uganda-omega.vercel.app/api/districts/' +
+                encodeURIComponent(locationId) +
+                '/counties'
+            );
+
+        if (!response.ok) {
+            throw new Error('Could not load counties');
+        }
+
+        const result =
+            await response.json();
+
+        let records =
+            Array.isArray(result)
+                ? result
+                : (
+                    result.counties ||
+                    result.data ||
+                    []
+                );
+
+        /*
+         * Some city/district units may not have a county
+         * tier in the API. In that case, use the district/city
+         * itself as the parent and load its direct children.
+         */
+        if (!records.length) {
+
+            const directResponse =
+                await fetch(
+                    'https://uganda-omega.vercel.app/api/units/' +
+                    encodeURIComponent(locationId)
+                );
+
+            if (directResponse.ok) {
+
+                const direct =
+                    await directResponse.json();
+
+                records =
+                    direct.children ||
+                    (direct.unit &&
+                     direct.unit.children) ||
+                    direct.data ||
+                    [];
+
+            }
+        }
+
+        if (!records.length) {
+
+            countySelect.innerHTML =
+                '<option value="">No county/municipality tier</option>';
+
+            /*
+             * For city-style units, load direct children as
+             * subcounty/town council/division.
+             */
+            await loadSubCountyChildren(
+                locationId
+            );
+
+            updateProgress();
+            return;
+        }
+
+        countySelect.innerHTML =
+            '<option value="">Select county/municipality</option>';
+
+        records.sort(function(a,b) {
+            return (a.name || '').localeCompare(
+                b.name || '',
+                undefined,
+                { sensitivity: 'base' }
+            );
+        });
+
+        records.forEach(function(item) {
+
+            const option =
+                document.createElement('option');
+
+            option.value =
+                item.id;
+
+            option.dataset.name =
+                item.name || '';
+
+            option.textContent =
+                item.name || '';
+
+            countySelect.appendChild(option);
+        });
+
+        countySelect.disabled = false;
+
+    } catch (error) {
+
+        console.error(error);
+
+        locationStatus.textContent =
+            'Unable to load counties/municipalities for ' +
+            locationName +
+            '. Please try again.';
+    }
+
+    updateProgress();
+});
+
+
+async function loadSubCountyChildren(parentId) {
+
+    try {
+
+        const response =
+            await fetch(
+                'https://uganda-omega.vercel.app/api/units/' +
+                encodeURIComponent(parentId)
+            );
+
+        if (!response.ok) {
+            throw new Error('Could not load subcounty children');
+        }
+
+        const result =
+            await response.json();
+
+        let records =
+            result.children ||
+            (result.unit &&
+             result.unit.children) ||
+            result.data ||
+            [];
+
+        if (!Array.isArray(records)) {
+            records = [];
+        }
+
+        subCountySelect.innerHTML =
+            '<option value="">Select sub county/town council/division</option>';
+
+        records.forEach(function(item) {
+
+            const option =
+                document.createElement('option');
+
+            option.value =
+                item.id;
+
+            option.dataset.name =
+                item.name || '';
+
+            option.dataset.level =
+                item.level || '';
+
+            option.textContent =
+                item.name || '';
+
+            subCountySelect.appendChild(option);
+        });
+
+        subCountySelect.disabled =
+            records.length === 0;
+
+    } catch(error) {
+
+        console.error(error);
+
+        subCountySelect.innerHTML =
+            '<option value="">Unable to load divisions</option>';
+
+        subCountySelect.disabled = false;
+    }
+}
+
+
+/* County / Municipality → Sub County / Town Council / Division */
+countySelect.addEventListener('change', async function() {
+
+    const selected =
+        this.options[this.selectedIndex];
+
+    const countyId =
+        this.value;
+
+    const countyName =
+        selected.dataset.name ||
+        selected.textContent ||
+        '';
+
+    this.dataset.selectedName =
+        countyName;
 
     parishSelect.innerHTML =
         '<option value="">Select sub county first</option>';
 
     villageSelect.innerHTML =
-        '<option value="">Select parish first</option>';
+        '<option value="">Select parish/ward first</option>';
 
-    subCountySelect.disabled = false;
+    subCountySelect.innerHTML =
+        '<option value="">Loading sub counties...</option>';
+
+    subCountySelect.disabled = true;
     parishSelect.disabled = true;
     villageSelect.disabled = true;
 
-    if (!district) {
+    if (!countyId) {
         updateProgress();
         return;
     }
 
-    await loadLocationLevel(
-        'subcounties',
-        district,
-        subCountySelect,
-        'Select sub county/town council'
-    );
+    try {
+
+        await loadSubCountyChildren(
+            countyId
+        );
+
+    } catch(error) {
+
+        console.error(error);
+
+        locationStatus.textContent =
+            'Unable to load sub counties/town councils.';
+    }
 
     updateProgress();
 });
@@ -772,28 +1318,106 @@ districtSelect.addEventListener('change', async function() {
 /* Sub County/Town Council → Parish/Ward */
 subCountySelect.addEventListener('change', async function() {
 
-    const subCounty = this.value;
+    const selected =
+        this.options[this.selectedIndex];
+
+    const subCountyId =
+        this.value;
+
+    const subCountyName =
+        selected.dataset.name ||
+        selected.textContent ||
+        '';
+
+    this.dataset.selectedName =
+        subCountyName;
 
     parishSelect.innerHTML =
-        '<option value="">Select sub county first</option>';
+        '<option value="">Select parish/ward</option>';
 
     villageSelect.innerHTML =
-        '<option value="">Select parish first</option>';
+        '<option value="">Select parish/ward first</option>';
 
-    parishSelect.disabled = false;
+    parishSelect.disabled = true;
     villageSelect.disabled = true;
 
-    if (!subCounty) {
+    if (!subCountyId) {
         updateProgress();
         return;
     }
 
-    await loadLocationLevel(
-        'parishes',
-        subCounty,
-        parishSelect,
-        'Select parish/ward'
-    );
+    try {
+
+        const response =
+            await fetch(
+                'https://uganda-omega.vercel.app/api/subcounties/' +
+                encodeURIComponent(subCountyId) +
+                '/parishes'
+            );
+
+        if (!response.ok) {
+            throw new Error('Could not load parishes');
+        }
+
+        const result =
+            await response.json();
+
+        let records =
+            Array.isArray(result)
+                ? result
+                : (
+                    result.parishes ||
+                    result.data ||
+                    []
+                );
+
+        if (!records.length) {
+
+            parishSelect.innerHTML =
+                '<option value="">No parishes/wards found</option>';
+
+            parishSelect.disabled = false;
+
+            return;
+        }
+
+        parishSelect.innerHTML =
+            '<option value="">Select parish/ward</option>';
+
+        records.sort(function(a,b) {
+            return (a.name || '').localeCompare(
+                b.name || '',
+                undefined,
+                { sensitivity: 'base' }
+            );
+        });
+
+        records.forEach(function(item) {
+
+            const option =
+                document.createElement('option');
+
+            option.value =
+                item.id;
+
+            option.dataset.name =
+                item.name || '';
+
+            option.textContent =
+                item.name || '';
+
+            parishSelect.appendChild(option);
+        });
+
+        parishSelect.disabled = false;
+
+    } catch(error) {
+
+        console.error(error);
+
+        locationStatus.textContent =
+            'Unable to load parishes/wards. Please try again.';
+    }
 
     updateProgress();
 });
@@ -802,24 +1426,115 @@ subCountySelect.addEventListener('change', async function() {
 /* Parish/Ward → Village */
 parishSelect.addEventListener('change', async function() {
 
-    const parish = this.value;
+    const selected =
+        this.options[this.selectedIndex];
+
+    const parishId =
+        this.value;
+
+    const parishName =
+        selected.dataset.name ||
+        selected.textContent ||
+        '';
+
+    this.dataset.selectedName =
+        parishName;
 
     villageSelect.innerHTML =
-        '<option value="">Select parish first</option>';
+        '<option value="">Loading villages/cells/zones...</option>';
 
-    villageSelect.disabled = false;
+    villageSelect.disabled = true;
 
-    if (!parish) {
+    if (!parishId) {
+
         updateProgress();
+
         return;
     }
 
-    await loadLocationLevel(
-        'villages',
-        parish,
-        villageSelect,
-        'Select village'
-    );
+    try {
+
+        /*
+         * The API returns the direct children of the parish,
+         * which can be village, cell or zone depending on
+         * the urban/rural administrative structure.
+         */
+        const response =
+            await fetch(
+                'https://uganda-omega.vercel.app/api/units/' +
+                encodeURIComponent(parishId)
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                'Could not load villages/cells'
+            );
+        }
+
+        const result =
+            await response.json();
+
+        let records =
+            result.children ||
+            (result.unit && result.unit.children) ||
+            result.data ||
+            [];
+
+        if (!Array.isArray(records)) {
+            records = [];
+        }
+
+        if (!records.length) {
+
+            villageSelect.innerHTML =
+                '<option value="">No village/cell found</option>';
+
+            villageSelect.disabled = false;
+
+            return;
+        }
+
+        villageSelect.innerHTML =
+            '<option value="">Select village/cell/zone</option>';
+
+        records.sort(function(a, b) {
+
+            return (a.name || '').localeCompare(
+                b.name || '',
+                undefined,
+                { sensitivity: 'base' }
+            );
+        });
+
+        records.forEach(function(item) {
+
+            const option =
+                document.createElement('option');
+
+            option.value =
+                item.name || '';
+
+            option.dataset.unitId =
+                item.id || '';
+
+            option.dataset.level =
+                item.level || '';
+
+            option.textContent =
+                item.name || '';
+
+            villageSelect.appendChild(option);
+        });
+
+        villageSelect.disabled = false;
+
+    } catch (error) {
+
+        console.error(error);
+
+        locationStatus.textContent =
+            'Unable to load villages/cells. Please try again.';
+    }
 
     updateProgress();
 });
@@ -867,58 +1582,293 @@ async function updateNearestHealthFacility() {
                 position.coords.longitude;
 
             locationStatus.textContent =
-                '🔎 Finding the nearest health facility...';
+                '🔎 Searching for nearby health facilities...';
 
             try {
 
-                const response = await fetch(
-                    'nearest_health_facility.php',
-                    {
-                        method: 'POST',
+                /*
+                 * OpenStreetMap Overpass is used here instead of
+                 * simply guessing a facility from the district.
+                 *
+                 * We search several healthcare-related OSM tags,
+                 * then calculate the actual straight-line distance
+                 * from the user's GPS position and select the
+                 * closest result.
+                 */
+                const radius =
+                    15000;
 
-                        headers: {
-                            'Content-Type':
-                                'application/json'
-                        },
+                const query = `
+[out:json][timeout:25];
+(
+  nwr["amenity"="hospital"](around:${radius},${latitude},${longitude});
+  nwr["amenity"="clinic"](around:${radius},${latitude},${longitude});
+  nwr["amenity"="doctors"](around:${radius},${latitude},${longitude});
+  nwr["healthcare"](around:${radius},${latitude},${longitude});
+);
+out center tags;
+`;
 
-                        body: JSON.stringify({
-                            latitude: latitude,
-                            longitude: longitude
-                        })
-                    }
-                );
+                const endpoint =
+                    'https://overpass-api.de/api/interpreter?data=' +
+                    encodeURIComponent(query);
+
+                const response =
+                    await fetch(endpoint);
 
                 if (!response.ok) {
                     throw new Error(
-                        'Health facility service unavailable'
+                        'Nearby health facility service unavailable'
                     );
                 }
 
                 const result =
                     await response.json();
 
-                if (
-                    result.success &&
-                    result.facility
+                const elements =
+                    Array.isArray(result.elements)
+                        ? result.elements
+                        : [];
+
+                if (!elements.length) {
+
+                    throw new Error(
+                        'No nearby facilities found'
+                    );
+                }
+
+                function getCoordinates(element) {
+
+                    if (
+                        typeof element.lat === 'number' &&
+                        typeof element.lon === 'number'
+                    ) {
+
+                        return {
+                            lat: element.lat,
+                            lon: element.lon
+                        };
+                    }
+
+                    if (
+                        element.center &&
+                        typeof element.center.lat === 'number' &&
+                        typeof element.center.lon === 'number'
+                    ) {
+
+                        return {
+                            lat: element.center.lat,
+                            lon: element.center.lon
+                        };
+                    }
+
+                    return null;
+                }
+
+
+                function distanceKm(
+                    lat1,
+                    lon1,
+                    lat2,
+                    lon2
                 ) {
 
-                    nearestHealthInput.value =
-                        result.facility.name;
+                    const earthRadius =
+                        6371;
 
-                    locationStatus.textContent =
-                        '📍 Nearest facility updated from your current location.';
+                    const dLat =
+                        (
+                            lat2 - lat1
+                        ) *
+                        Math.PI /
+                        180;
 
-                    saveLocationCoordinates(
-                        latitude,
-                        longitude
+                    const dLon =
+                        (
+                            lon2 - lon1
+                        ) *
+                        Math.PI /
+                        180;
+
+                    const a =
+                        Math.sin(dLat / 2) *
+                        Math.sin(dLat / 2) +
+                        Math.cos(
+                            lat1 *
+                            Math.PI /
+                            180
+                        ) *
+                        Math.cos(
+                            lat2 *
+                            Math.PI /
+                            180
+                        ) *
+                        Math.sin(dLon / 2) *
+                        Math.sin(dLon / 2);
+
+                    const c =
+                        2 *
+                        Math.atan2(
+                            Math.sqrt(a),
+                            Math.sqrt(1 - a)
+                        );
+
+                    return earthRadius * c;
+                }
+
+
+                const facilities =
+                    elements
+                    .map(function(element) {
+
+                        const coordinates =
+                            getCoordinates(element);
+
+                        if (!coordinates) {
+                            return null;
+                        }
+
+                        const tags =
+                            element.tags || {};
+
+                        const name =
+                            tags.name ||
+                            tags['name:en'] ||
+                            tags.healthcare ||
+                            tags.amenity ||
+                            'Health Facility';
+
+                        const distance =
+                            distanceKm(
+                                latitude,
+                                longitude,
+                                coordinates.lat,
+                                coordinates.lon
+                            );
+
+                        return {
+                            name: name,
+                            distance: distance,
+                            latitude:
+                                coordinates.lat,
+                            longitude:
+                                coordinates.lon,
+                            type:
+                                tags.healthcare ||
+                                tags.amenity ||
+                                ''
+                        };
+
+                    })
+                    .filter(Boolean);
+
+
+                if (!facilities.length) {
+
+                    throw new Error(
+                        'No mappable facilities found'
+                    );
+                }
+
+
+                /*
+                 * Closest facility first.
+                 */
+                facilities.sort(
+                    function(a, b) {
+                        return a.distance -
+                               b.distance;
+                    }
+                );
+
+
+                const nearest =
+                    facilities[0];
+
+
+                nearestHealthInput.value =
+                    nearest.name;
+
+
+                const roundedDistance =
+                    nearest.distance < 1
+                        ? Math.round(
+                            nearest.distance * 1000
+                          ) + ' m'
+                        : nearest.distance.toFixed(1) + ' km';
+
+
+                locationStatus.textContent =
+                    '📍 ' +
+                    nearest.name +
+                    ' (' +
+                    roundedDistance +
+                    ' away)';
+
+
+                saveLocationCoordinates(
+                    latitude,
+                    longitude
+                );
+
+
+                /*
+                 * Keep the selected facility's coordinates
+                 * available for save_profile.php.
+                 */
+                let facilityLat =
+                    document.getElementById(
+                        'nearestFacilityLatitude'
                     );
 
-                } else {
+                let facilityLng =
+                    document.getElementById(
+                        'nearestFacilityLongitude'
+                    );
 
-                    locationStatus.textContent =
-                        'No nearby health facility was found.';
+                if (!facilityLat) {
 
+                    facilityLat =
+                        document.createElement('input');
+
+                    facilityLat.type =
+                        'hidden';
+
+                    facilityLat.name =
+                        'nearest_facility_latitude';
+
+                    facilityLat.id =
+                        'nearestFacilityLatitude';
+
+                    form.appendChild(
+                        facilityLat
+                    );
                 }
+
+                if (!facilityLng) {
+
+                    facilityLng =
+                        document.createElement('input');
+
+                    facilityLng.type =
+                        'hidden';
+
+                    facilityLng.name =
+                        'nearest_facility_longitude';
+
+                    facilityLng.id =
+                        'nearestFacilityLongitude';
+
+                    form.appendChild(
+                        facilityLng
+                    );
+                }
+
+                facilityLat.value =
+                    nearest.latitude;
+
+                facilityLng.value =
+                    nearest.longitude;
 
             } catch (error) {
 
@@ -928,11 +1878,12 @@ async function updateNearestHealthFacility() {
                 );
 
                 locationStatus.textContent =
-                    'Unable to find the nearest health facility. Please try again.';
+                    'Unable to identify a nearby health facility. Tap "Update nearest facility" to try again.';
 
             } finally {
 
-                refreshFacilityBtn.disabled = false;
+                refreshFacilityBtn.disabled =
+                    false;
 
                 updateProgress();
             }
@@ -940,7 +1891,8 @@ async function updateNearestHealthFacility() {
 
         function(error) {
 
-            refreshFacilityBtn.disabled = false;
+            refreshFacilityBtn.disabled =
+                false;
 
             console.error(
                 'Geolocation error:',
@@ -953,7 +1905,23 @@ async function updateNearestHealthFacility() {
             ) {
 
                 locationStatus.textContent =
-                    'Location permission was denied. Allow location access to find your nearest facility.';
+                    'Location permission was denied. Allow location access to find your nearest health facility.';
+
+            } else if (
+                error.code ===
+                error.POSITION_UNAVAILABLE
+            ) {
+
+                locationStatus.textContent =
+                    'Your current location is unavailable. Please try again.';
+
+            } else if (
+                error.code ===
+                error.TIMEOUT
+            ) {
+
+                locationStatus.textContent =
+                    'Location request timed out. Please try again.';
 
             } else {
 
@@ -964,8 +1932,8 @@ async function updateNearestHealthFacility() {
 
         {
             enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 300000
+            timeout: 20000,
+            maximumAge: 120000
         }
     );
 }
@@ -1024,16 +1992,92 @@ const progressBar = document.getElementById('progressBar');
 const progressPercent = document.getElementById('progressPercent');
 
 
-/* Normalize emergency contact phone before saving */
+/* Prepare selected human-readable locations before saving */
 document.getElementById('profileForm').addEventListener(
     'submit',
     function() {
 
+        /*
+         * The database should continue receiving the human-readable
+         * district/subcounty/parish/village names, not API IDs.
+         */
+        const districtOption =
+            districtSelect.options[
+                districtSelect.selectedIndex
+            ];
+
+        const countyOption =
+            countySelect.options[
+                countySelect.selectedIndex
+            ];
+
+        const subCountyOption =
+            subCountySelect.options[
+                subCountySelect.selectedIndex
+            ];
+
+        const parishOption =
+            parishSelect.options[
+                parishSelect.selectedIndex
+            ];
+
+        const villageOption =
+            villageSelect.options[
+                villageSelect.selectedIndex
+            ];
+
+        if (
+            districtOption &&
+            districtOption.dataset.name
+        ) {
+
+            districtSelect.dataset.saveValue =
+                districtOption.dataset.name;
+        }
+
+        if (
+            countyOption &&
+            countyOption.dataset.name
+        ) {
+
+            countySelect.dataset.saveValue =
+                countyOption.dataset.name;
+        }
+
+        if (
+            subCountyOption &&
+            subCountyOption.dataset.name
+        ) {
+
+            subCountySelect.dataset.saveValue =
+                subCountyOption.dataset.name;
+        }
+
+        if (
+            parishOption &&
+            parishOption.dataset.name
+        ) {
+
+            parishSelect.dataset.saveValue =
+                parishOption.dataset.name;
+        }
+
+        /*
+         * Village options already use the village name as value.
+         */
+
+        /*
+         * Normalize emergency contact phone before saving.
+         */
         const kinCode =
-            document.getElementById('kinCountryCode').value;
+            document.getElementById(
+                'kinCountryCode'
+            ).value;
 
         const kinInput =
-            document.getElementById('kinContact');
+            document.getElementById(
+                'kinContact'
+            );
 
         if (
             kinInput &&
@@ -1041,16 +2085,47 @@ document.getElementById('profileForm').addEventListener(
         ) {
 
             let kinPhone =
-                kinInput.value.replace(/\D/g, '');
+                kinInput.value.replace(
+                    /\D/g,
+                    ''
+                );
 
             kinPhone =
-                kinPhone.replace(/^0+/, '');
+                kinPhone.replace(
+                    /^0+/,
+                    ''
+                );
 
             if (kinPhone) {
 
                 kinInput.value =
-                    kinCode + kinPhone;
+                    kinCode +
+                    kinPhone;
             }
+        }
+
+        /*
+         * Replace select values with names immediately before
+         * FormData/browser submission.
+         */
+        if (districtSelect.dataset.saveValue) {
+            districtSelect.value =
+                districtSelect.dataset.saveValue;
+        }
+
+        if (countySelect.dataset.saveValue) {
+            countySelect.value =
+                countySelect.dataset.saveValue;
+        }
+
+        if (subCountySelect.dataset.saveValue) {
+            subCountySelect.value =
+                subCountySelect.dataset.saveValue;
+        }
+
+        if (parishSelect.dataset.saveValue) {
+            parishSelect.value =
+                parishSelect.dataset.saveValue;
         }
     }
 );
@@ -1252,6 +2327,19 @@ document.getElementById('clear-btn').onclick = () => {
     /*
      * Restore location controls after reset.
      */
+    countySelect.innerHTML =
+        '<option value="">Select district or city first</option>';
+
+    subCountySelect.innerHTML =
+        '<option value="">Select county/municipality first</option>';
+
+    parishSelect.innerHTML =
+        '<option value="">Select sub county first</option>';
+
+    villageSelect.innerHTML =
+        '<option value="">Select parish/ward first</option>';
+
+    countySelect.disabled = true;
     subCountySelect.disabled = true;
     parishSelect.disabled = true;
     villageSelect.disabled = true;
