@@ -499,7 +499,7 @@ $recent_messages = $conn->query("
     <div style="margin-bottom: 20px; text-align: right;">
         <a href="?export_excel=1" class="btn-excel"><i class="fas fa-file-excel"></i> Export Excel</a>
         <button onclick="window.print()" class="btn-print"><i class="fas fa-print"></i> Print</button>
-        <a href="http://localhost/phpmyadmin" target="_blank" class="btn-db"><i class="fas fa-database"></i> Database</a>
+        <a href="https://railway.com/dashboard" target="_blank" rel="noopener noreferrer" class="btn-db"><i class="fas fa-database"></i> Railway Database</a>
     </div>
 
     <!-- ALL USERS -->
