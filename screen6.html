@@ -1743,6 +1743,34 @@ document.getElementById('submitClinic').onclick = async () => {
 // ============================================
 // INITIALIZE
 // ============================================
+
+// ============================================
+// SERVICE WORKER REGISTRATION
+// ============================================
+async function registerMotherCareServiceWorker() {
+    if (!('serviceWorker' in navigator)) {
+        console.warn('Service workers are not supported in this browser/WebView.');
+        return;
+    }
+
+    try {
+        const registration = await navigator.serviceWorker.register(
+            './service-worker.js',
+            { scope: './' }
+        );
+
+        console.log(
+            'MotherCare offline service worker registered:',
+            registration.scope
+        );
+    } catch (error) {
+        console.error(
+            'MotherCare service worker registration failed:',
+            error
+        );
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     updateConnectionUI();
     updateOfflineStatus();
