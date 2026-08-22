@@ -10,45 +10,56 @@
             box-sizing: border-box;
         }
 
+        html {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
             background-color: white;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
                          Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 16px;
+            overflow: hidden;
         }
 
         /* Android-style landing screen */
         .container {
             position: relative;
-            width: 360px;
-            height: 640px;
-            margin: 0 auto;
-            border-radius: 24px;
+
+            /* Fill the actual browser/app viewport on the Android phone */
+            width: 100vw;
+            height: 100vh;
+            height: 100svh;
+            min-height: 100vh;
+            min-height: 100svh;
+
+            margin: 0;
+            padding: 0;
+            border-radius: 0;
+            border: none;
+            overflow: hidden;
 
             /* Keep containerbackground.png beside screen1.html */
             background-image: url('containerbackground.png');
             background-size: cover;
-            background-position: center;
+            background-position: center center;
             background-repeat: no-repeat;
-
-            border: 3px solid #dce8f7;
-            overflow: hidden;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
         }
 
         /* MotherCare remains an HTML image */
         .logo {
             position: absolute;
-            top: 42px;
+            top: 6.56%;
             left: 50%;
             transform: translateX(-50%);
             display: block;
-            width: 200px;
+            width: 55.56%;
             height: auto;
             z-index: 10;
             animation: blink 2s linear infinite;
@@ -77,9 +88,9 @@
          */
         .login-container {
             position: absolute;
-            left: 24px;
-            right: 24px;
-            top: 492px;
+            left: 6.67%;
+            right: 6.67%;
+            top: 76.875%;
             display: flex;
             flex-direction: column;
             gap: 12px;
@@ -91,7 +102,8 @@
         .btn-login,
         .btn-signup {
             width: 100%;
-            height: 44px;
+            min-height: 44px;
+            height: clamp(44px, 6.9vh, 56px);
             padding: 0;
             border-radius: 25px;
             font-size: 15px;
@@ -131,9 +143,9 @@
         /* AI caption remains controlled by HTML */
         .notice {
             position: absolute;
-            left: 20px;
-            right: 20px;
-            top: 604px;
+            left: 5.56%;
+            right: 5.56%;
+            top: 94.375%;
             margin: 0;
             padding: 0;
             text-align: center;
