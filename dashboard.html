@@ -169,6 +169,12 @@ tr:hover{background:#f8f9fa}
 .delete-record-btn i{margin-right:4px}
 .delete-note{font-size:10px;color:#8a9691;margin-top:8px}
 
+
+.pending-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:10px;background:#fff0d8;color:#9a6200;font-size:9px;font-weight:800;margin-left:5px}
+.delete-record-btn{border:1px solid #f1c4c8;background:#fff0f1;color:#c82333;border-radius:8px;padding:7px 10px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap}
+.delete-record-btn:hover{background:#dc3545;color:#fff}
+.delete-record-btn i{margin-right:4px}
+.offline-record-badge{display:inline-block;margin-left:5px;padding:3px 6px;border-radius:10px;background:#fff4d8;color:#956000;font-size:9px;font-weight:700}
 </style>
 </head>
 
@@ -306,7 +312,7 @@ tr:hover{background:#f8f9fa}
       </div>
       <div class="table-wrapper">
         <table>
-          <thead><tr><th>Date</th><th>Symptoms</th><th>Blood Pressure</th><th>Risk Level</th><th>Risk Score</th><th>Action</th><th>Action</th></tr></thead>
+          <thead><tr><th>Date</th><th>Symptoms</th><th>Blood Pressure</th><th>Risk Level</th><th>Risk Score</th><th>Action</th></tr></thead>
           <tbody id="symptomsTableBody">
             <tr><td colspan="6" style="text-align:center;color:#6c757d;padding:30px"><i class="fas fa-spinner fa-spin"></i> Loading data...</td></tr>
           </tbody>
@@ -515,40 +521,22 @@ function updateTable(visits) {
     visits.slice(0, 10).forEach((visit, index) => {
         const riskClass = (visit.risk_level || 'low').toLowerCase();
         const riskScore = visit.risk_score ?? visit.risk ?? 'N/A';
-
-        // Accept the common ID field names without changing the backend.
         const recordId = visit.id ?? visit.visit_id ?? visit.assessment_id ?? '';
 
         html += `
             <tr id="record-row-${recordId || index}">
                 <td>${visit.created_at ? new Date(visit.created_at).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                    month:'short', day:'numeric', year:'numeric',
+                    hour:'2-digit', minute:'2-digit'
                 }) : 'N/A'}</td>
-
-                <td>${visit.symptoms
-                    ? (visit.symptoms.substring(0, 50) + (visit.symptoms.length > 50 ? '...' : ''))
-                    : 'N/A'}</td>
-
+                <td>${visit.symptoms ? (visit.symptoms.substring(0,50) + (visit.symptoms.length > 50 ? '...' : '')) : 'N/A'}</td>
                 <td>${visit.blood_pressure || 'N/A'}</td>
-
-                <td>
-                    <span class="badge badge-${riskClass}">
-                        ${visit.risk_level || 'N/A'}
-                    </span>
-                </td>
-
+                <td><span class="badge badge-${riskClass}">${visit.risk_level || 'N/A'}</span></td>
                 <td>${riskScore}${riskScore !== 'N/A' ? '%' : ''}</td>
-
                 <td>
-                    <button
-                        type="button"
-                        class="delete-record-btn"
-                        onclick="deleteRecord('${String(recordId).replace(/'/g, "\'")}', this)"
-                        title="Delete this record">
+                    <button type="button" class="delete-record-btn"
+                            onclick="deleteRecord('${String(recordId).replace(/'/g, "\'")}', this)"
+                            title="Delete this record">
                         <i class="fas fa-trash-alt"></i> Delete
                     </button>
                 </td>
@@ -618,45 +606,200 @@ console.log('Health Analytics Dashboard loaded. Session timeout: ' + SESSION_TIM
 </script>
 
 <script>
-// ============================================
-// OFFLINE / SYNC STATUS UI
-// This does NOT alter the existing database/API pipeline.
-// Actual local-data synchronization will be implemented separately.
-// ============================================
-const syncStatus = document.getElementById('syncStatus');
-const syncStatusText = document.getElementById('syncStatusText');
-const syncButton = document.getElementById('syncButton');
-const pendingSync = document.getElementById('pendingSync');
 
-function updateConnectionStatus(){
-  if(navigator.onLine){
-    syncStatus.className='sync-status';
-    syncStatusText.textContent='Online • Connected';
-    pendingSync.textContent='Internet connection available.';
-    syncButton.disabled=false;
-  }else{
-    syncStatus.className='sync-status offline';
-    syncStatusText.textContent='Offline • Working locally';
-    pendingSync.textContent='No Internet connection. Data synchronization will wait until you reconnect.';
-    syncButton.disabled=true;
-  }
+// ============================================
+// MOTHERCARE OFFLINE DATA + SYNCHRONIZATION
+// ============================================
+const MC_DB_NAME = 'MotherCareOfflineDB';
+const MC_DB_VERSION = 1;
+const MC_STORE = 'pendingAssessments';
+
+function openMotherCareDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(MC_DB_NAME, MC_DB_VERSION);
+
+        request.onupgradeneeded = event => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(MC_STORE)) {
+                db.createObjectStore(MC_STORE, { keyPath: 'client_id' });
+            }
+        };
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
 }
-function syncNow(){
-  if(!navigator.onLine){
-    showToast('You are offline. Synchronization will be available when Internet returns.','info');
-    return;
-  }
-  syncButton.disabled=true;
-  syncButton.innerHTML='<i class="fas fa-sync-alt fa-spin"></i> Checking...';
-  setTimeout(()=>{
-    syncButton.disabled=false;
-    syncButton.innerHTML='<i class="fas fa-sync-alt"></i> Sync Now';
-    pendingSync.textContent='Connection verified. No synchronization service has been connected yet.';
-    showToast('Connection verified.','success');
-  },700);
+
+async function getPendingOfflineRecords() {
+    const db = await openMotherCareDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(MC_STORE, 'readonly');
+        const store = tx.objectStore(MC_STORE);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+    });
 }
-window.addEventListener('online',updateConnectionStatus);
-window.addEventListener('offline',updateConnectionStatus);
+
+async function removePendingOfflineRecord(clientId) {
+    const db = await openMotherCareDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(MC_STORE, 'readwrite');
+        tx.objectStore(MC_STORE).delete(clientId);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+async function updateConnectionStatus() {
+    const pending = await getPendingOfflineRecords().catch(() => []);
+
+    if (navigator.onLine) {
+        syncStatus.className = 'sync-status';
+        syncStatusText.textContent = 'Online • Connected';
+        pendingSync.innerHTML = pending.length
+            ? `${pending.length} record${pending.length === 1 ? '' : 's'} waiting to sync.`
+            : 'All saved health data is synchronized.';
+        syncButton.disabled = false;
+    } else {
+        syncStatus.className = 'sync-status offline';
+        syncStatusText.textContent = 'Offline • Working locally';
+        pendingSync.innerHTML = pending.length
+            ? `${pending.length} record${pending.length === 1 ? '' : 's'} saved offline and waiting to sync.`
+            : 'Offline. New assessments will be saved on this device.';
+        syncButton.disabled = true;
+    }
+}
+
+async function syncNow(silent = false) {
+    if (!navigator.onLine) {
+        if (!silent) showToast('You are offline. Your records are safe on this device.', 'info');
+        await updateConnectionStatus();
+        return;
+    }
+
+    const pending = await getPendingOfflineRecords().catch(() => []);
+
+    if (!pending.length) {
+        await updateConnectionStatus();
+        if (!silent) showToast('Everything is already synchronized.', 'success');
+        return;
+    }
+
+    syncButton.disabled = true;
+    syncButton.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Syncing...';
+    syncStatusText.textContent = 'Synchronizing...';
+
+    try {
+        const response = await fetch('sync_offline_records.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({records: pending})
+        });
+
+        if (!response.ok) throw new Error('Synchronization server error');
+
+        const result = await response.json();
+
+        if (!result.success && (!result.synced || result.synced.length === 0)) {
+            throw new Error(result.error || 'Synchronization failed');
+        }
+
+        for (const item of (result.synced || [])) {
+            if (item.client_id) {
+                await removePendingOfflineRecord(item.client_id);
+            }
+        }
+
+        await updateConnectionStatus();
+        fetchData();
+
+        if (!silent) {
+            const remaining = await getPendingOfflineRecords();
+            showToast(
+                remaining.length
+                    ? `${remaining.length} record(s) still waiting to sync.`
+                    : 'All offline health records synchronized.',
+                remaining.length ? 'info' : 'success'
+            );
+        }
+    } catch (error) {
+        console.error('Synchronization error:', error);
+        await updateConnectionStatus();
+        if (!silent) showToast('Synchronization could not complete. Your offline records are still safe.', 'error');
+    } finally {
+        syncButton.disabled = !navigator.onLine;
+        syncButton.innerHTML = '<i class="fas fa-sync-alt"></i> Sync Now';
+    }
+}
+
+async function deleteRecord(recordId, button) {
+    const row = button.closest('tr');
+
+    // Unsynced local record.
+    if (String(recordId).startsWith('offline:')) {
+        const clientId = String(recordId).substring(8);
+        if (!confirm('Delete this offline health record?')) return;
+
+        try {
+            await removePendingOfflineRecord(clientId);
+            if (row) row.remove();
+            await updateConnectionStatus();
+            showToast('Offline record deleted.', 'success');
+        } catch (error) {
+            showToast('Could not delete the offline record.', 'error');
+        }
+        return;
+    }
+
+    const id = parseInt(recordId, 10);
+    if (!id) {
+        showToast('This record has no valid database ID.', 'error');
+        return;
+    }
+
+    if (!confirm('Delete this health record permanently? This cannot be undone.')) return;
+
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+    try {
+        const response = await fetch('delete_symptom_record.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({record_id: id})
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'Delete failed');
+        }
+
+        if (row) row.remove();
+        showToast('Health record permanently deleted.', 'success');
+        fetchData();
+    } catch (error) {
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-trash-alt"></i> Delete';
+        showToast(error.message || 'Could not delete the record.', 'error');
+    }
+}
+
+window.addEventListener('online', () => {
+    updateConnectionStatus();
+    syncNow(true);
+});
+window.addEventListener('offline', updateConnectionStatus);
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(err => {
+            console.warn('MotherCare service worker registration failed:', err);
+        });
+    });
+}
+
 updateConnectionStatus();
 </script>
 
