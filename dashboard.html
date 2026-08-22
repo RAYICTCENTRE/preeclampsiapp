@@ -159,6 +159,16 @@ tr:hover{background:#f8f9fa}
   .feature-card{min-height:115px}
   .main-content{padding-top:15px}
 }
+
+.delete-record-btn{
+  border:0;background:#fff0f1;color:#c82333;border-radius:8px;
+  padding:6px 9px;font-size:10px;font-weight:700;cursor:pointer;
+  transition:all .2s;white-space:nowrap
+}
+.delete-record-btn:hover{background:#dc3545;color:#fff}
+.delete-record-btn i{margin-right:4px}
+.delete-note{font-size:10px;color:#8a9691;margin-top:8px}
+
 </style>
 </head>
 
@@ -293,13 +303,12 @@ tr:hover{background:#f8f9fa}
     <div class="section">
       <div class="section-header">
         <h3>📋 Recent Symptoms Records</h3>
-        <a href="full_history.html" class="btn-view-all">View All →</a>
       </div>
       <div class="table-wrapper">
         <table>
-          <thead><tr><th>Date</th><th>Symptoms</th><th>Blood Pressure</th><th>Risk Level</th><th>Risk Score</th></tr></thead>
+          <thead><tr><th>Date</th><th>Symptoms</th><th>Blood Pressure</th><th>Risk Level</th><th>Risk Score</th><th>Action</th></tr></thead>
           <tbody id="symptomsTableBody">
-            <tr><td colspan="5" style="text-align:center;color:#6c757d;padding:30px"><i class="fas fa-spinner fa-spin"></i> Loading data...</td></tr>
+            <tr><td colspan="6" style="text-align:center;color:#6c757d;padding:30px"><i class="fas fa-spinner fa-spin"></i> Loading data...</td></tr>
           </tbody>
         </table>
       </div>
@@ -480,7 +489,7 @@ function fetchData() {
         .catch(error => {
             console.error('Error fetching data:', error);
             document.getElementById('symptomsTableBody').innerHTML = `
-                <tr><td colspan="5" style="text-align:center;color:#dc3545;padding:30px;">
+                <tr><td colspan="6" style="text-align:center;color:#dc3545;padding:30px;">
                     <i class="fas fa-exclamation-circle"></i> Failed to load data
                 </td></tr>
             `;
@@ -491,7 +500,7 @@ function updateTable(visits) {
     const tbody = document.getElementById('symptomsTableBody');
     if (!visits || visits.length === 0) {
         tbody.innerHTML = `
-            <tr><td colspan="5" style="text-align:center;color:#6c757d;padding:30px;">
+            <tr><td colspan="6" style="text-align:center;color:#6c757d;padding:30px;">
                 <i class="fas fa-clipboard-list"></i> No symptoms records found
             </td></tr>
         `;
@@ -535,6 +544,34 @@ function updateRiskDistribution(visits) {
         document.getElementById(level.toLowerCase() + 'Count').textContent = count;
         document.getElementById(level.toLowerCase() + 'Summary').textContent = count + ' visit' + (count !== 1 ? 's' : '');
     });
+}
+
+
+// ============================================
+// DELETE RECORD UI
+// IMPORTANT: This does not call or alter the database yet.
+// It removes the row from the current dashboard view only.
+// A real database delete endpoint should be added separately.
+// ============================================
+function deleteRecord(recordId, button) {
+    if (recordId === null || recordId === undefined || recordId === 'null') {
+        showToast('This record has no database ID available, so it cannot be deleted yet.', 'error');
+        return;
+    }
+
+    const confirmed = confirm(
+        'Delete this health record from your dashboard?\\n\\n' +
+        'This action should only be used if you are sure you no longer want this record.'
+    );
+
+    if (!confirmed) return;
+
+    // UI-only deletion for now. Database deletion is intentionally not attempted.
+    const row = button.closest('tr');
+    if (row) {
+        row.remove();
+        showToast('Record removed from this view.', 'success');
+    }
 }
 
 // ============================================
