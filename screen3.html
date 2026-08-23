@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sign Up - MotherCare</title>
 
 <style>
@@ -33,14 +33,8 @@ body {
 }
 
 @keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .logo {
@@ -74,6 +68,12 @@ h2 {
     margin-bottom: 16px;
 }
 
+/* Text inputs */
+.input-wrap {
+    position: relative;
+    width: 100%;
+}
+
 input, select {
     width: 100%;
     padding: 12px 14px;
@@ -92,7 +92,23 @@ input:focus, select:focus {
     background: white;
 }
 
-/* PHONE NUMBER AREA */
+/* Red required asterisk inside the field */
+.required-star {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #dc2626;
+    font-weight: 800;
+    font-size: 18px;
+    pointer-events: none;
+}
+
+.input-wrap input {
+    padding-right: 34px;
+}
+
+/* Phone number area */
 .phone-row {
     display: flex;
     gap: 8px;
@@ -129,6 +145,48 @@ input:focus, select:focus {
     padding-left: 4px;
 }
 
+.password-wrapper {
+    position: relative;
+}
+
+.password-wrapper input {
+    padding-right: 50px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 7px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 38px;
+    height: 38px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+.password-toggle:hover {
+    color: #e67e22;
+}
+
+.password-hint {
+    display: block;
+    margin-top: 6px;
+    padding-left: 4px;
+    font-size: 11px;
+    line-height: 1.4;
+    color: #64748b;
+}
+
+.field-error {
+    border-color: #dc2626 !important;
+    box-shadow: 0 0 0 3px rgba(220,38,38,.08) !important;
+}
+
 .btn {
     width: 100%;
     padding: 12px;
@@ -151,6 +209,12 @@ input:focus, select:focus {
 .btn-primary:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(230,126,34,0.4);
+}
+
+.btn-primary:disabled {
+    opacity: 0.7;
+    cursor: wait;
+    transform: none;
 }
 
 .btn-secondary {
@@ -213,7 +277,7 @@ input:focus, select:focus {
     .signup-container {
         padding: 28px 24px;
     }
-    
+
     h2 {
         font-size: 22px;
     }
@@ -233,36 +297,47 @@ input:focus, select:focus {
 
 <div class="signup-container">
 
-    <!-- LOGO -->
     <div class="logo">
         <h1>MotherCare</h1>
         <p>Pre-eclampsia Guardian</p>
     </div>
-    
+
     <h2>Create Account</h2>
-    
-    <form id="signupForm">
+
+    <form id="signupForm" novalidate>
 
         <!-- FIRST NAME -->
         <div class="form-group">
-            <input
-                type="text"
-                name="firstname"
-                placeholder="First Name"
-                required
-            >
+            <div class="input-wrap">
+                <input
+                    type="text"
+                    name="firstname"
+                    id="firstname"
+                    placeholder="First Name"
+                    maxlength="100"
+                    autocomplete="given-name"
+                    required
+                >
+                <span class="required-star" aria-hidden="true">*</span>
+            </div>
         </div>
-        
+
         <!-- LAST NAME -->
         <div class="form-group">
-            <input
-                type="text"
-                name="lastname"
-                placeholder="Last Name"
-                required
-            >
+            <div class="input-wrap">
+                <input
+                    type="text"
+                    name="lastname"
+                    id="lastname"
+                    placeholder="Last Name"
+                    maxlength="100"
+                    autocomplete="family-name"
+                    required
+                >
+                <span class="required-star" aria-hidden="true">*</span>
+            </div>
         </div>
-        
+
         <!-- EMAIL - OPTIONAL -->
         <div class="form-group">
             <input
@@ -270,90 +345,48 @@ input:focus, select:focus {
                 name="email"
                 id="email"
                 placeholder="Email Address (optional)"
+                maxlength="100"
+                autocomplete="email"
             >
-
             <div class="optional-note">
                 Email is optional. You can also use your phone number to login.
             </div>
         </div>
-        
-        <!-- PHONE NUMBER - REQUIRED -->
+
+        <!-- PHONE NUMBER -->
         <div class="form-group">
-
             <div class="phone-row">
+                <div class="input-wrap country-code">
+                    <select name="country_code" id="country_code" required>
+                        <option value="+256" selected>🇺🇬 Uganda (+256)</option>
+                        <option value="+254">🇰🇪 Kenya (+254)</option>
+                        <option value="+255">🇹🇿 Tanzania (+255)</option>
+                        <option value="+250">🇷🇼 Rwanda (+250)</option>
+                        <option value="+211">🇸🇸 South Sudan (+211)</option>
+                        <option value="+243">🇨🇩 DR Congo (+243)</option>
+                        <option value="+234">🇳🇬 Nigeria (+234)</option>
+                        <option value="+233">🇬🇭 Ghana (+233)</option>
+                        <option value="+27">🇿🇦 South Africa (+27)</option>
+                        <option value="+1">🇺🇸 USA (+1)</option>
+                        <option value="+44">🇬🇧 UK (+44)</option>
+                        <option value="+91">🇮🇳 India (+91)</option>
+                        <option value="+971">🇦🇪 UAE (+971)</option>
+                    </select>
+                </div>
 
-                <!-- COUNTRY CODE -->
-                <select
-                    name="country_code"
-                    id="country_code"
-                    class="country-code"
-                    required
-                >
-                    <option value="+256" selected>
-                        🇺🇬 Uganda (+256)
-                    </option>
-
-                    <option value="+254">
-                        🇰🇪 Kenya (+254)
-                    </option>
-
-                    <option value="+255">
-                        🇹🇿 Tanzania (+255)
-                    </option>
-
-                    <option value="+250">
-                        🇷🇼 Rwanda (+250)
-                    </option>
-
-                    <option value="+211">
-                        🇸🇸 South Sudan (+211)
-                    </option>
-
-                    <option value="+243">
-                        🇨🇩 DR Congo (+243)
-                    </option>
-
-                    <option value="+234">
-                        🇳🇬 Nigeria (+234)
-                    </option>
-
-                    <option value="+233">
-                        🇬🇭 Ghana (+233)
-                    </option>
-
-                    <option value="+27">
-                        🇿🇦 South Africa (+27)
-                    </option>
-
-                    <option value="+1">
-                        🇺🇸 USA (+1)
-                    </option>
-
-                    <option value="+44">
-                        🇬🇧 UK (+44)
-                    </option>
-
-                    <option value="+91">
-                        🇮🇳 India (+91)
-                    </option>
-
-                    <option value="+971">
-                        🇦🇪 UAE (+971)
-                    </option>
-                </select>
-
-                <!-- PHONE NUMBER -->
-                <input
-                    type="tel"
-                    name="phone"
-                    id="phone"
-                    class="phone-input"
-                    placeholder="Phone Number"
-                    inputmode="numeric"
-                    autocomplete="tel"
-                    required
-                >
-
+                <div class="input-wrap phone-input">
+                    <input
+                        type="tel"
+                        name="phone"
+                        id="phone"
+                        placeholder="Phone Number"
+                        inputmode="numeric"
+                        autocomplete="tel"
+                        maxlength="20"
+                        required
+                    >
+                    <span class="required-star" aria-hidden="true">*</span>
+                </div>
             </div>
 
             <div class="required-note">
@@ -363,364 +396,285 @@ input:focus, select:focus {
             <div class="phone-note">
                 Example: 0772 123456 → +256772123456
             </div>
-
         </div>
-        
+
         <!-- USER TYPE -->
         <div class="form-group">
-            <select name="user_type" required>
-                <option value="">Select User Type</option>
-
-                <option value="client">
-                    Patient
-                </option>
-
-                <option value="doctor">
-                    Doctor
-                </option>
-            </select>
+            <div class="input-wrap">
+                <select name="user_type" id="user_type" required>
+                    <option value="" selected>Select User Type</option>
+                    <option value="client">Patient</option>
+                    <option value="doctor">Doctor</option>
+                </select>
+                <span class="required-star" aria-hidden="true">*</span>
+            </div>
         </div>
-        
+
         <!-- PASSWORD -->
         <div class="form-group">
-            <input
-                type="password"
-                id="password"
-                name="password"
-                placeholder="Create Password (min 6 characters)"
-                required
-            >
+            <div class="password-wrapper">
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Create Password"
+                    minlength="8"
+                    autocomplete="new-password"
+                    required
+                >
+                <button
+                    type="button"
+                    class="password-toggle"
+                    onclick="togglePassword('password', this)"
+                    aria-label="Show password"
+                >👁</button>
+            </div>
+            <div class="required-note">Password is required</div>
+            <small class="password-hint">
+                Minimum 8 characters: uppercase, lowercase, number and special character.
+            </small>
         </div>
-        
+
         <!-- CONFIRM PASSWORD -->
         <div class="form-group">
-            <input
-                type="password"
-                id="confirm_password"
-                name="confirm_password"
-                placeholder="Confirm Password"
-                required
-            >
+            <div class="password-wrapper">
+                <input
+                    type="password"
+                    id="confirm_password"
+                    name="confirm_password"
+                    placeholder="Confirm Password"
+                    minlength="8"
+                    autocomplete="new-password"
+                    required
+                >
+                <button
+                    type="button"
+                    class="password-toggle"
+                    onclick="togglePassword('confirm_password', this)"
+                    aria-label="Show password"
+                >👁</button>
+            </div>
+            <div class="required-note">Confirmation is required</div>
         </div>
-        
-        <!-- SIGN UP BUTTON -->
-        <button
-            type="submit"
-            class="btn btn-primary"
-        >
-            Sign Up
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">
+            <span id="submitText">Sign Up</span>
         </button>
 
     </form>
-    
-    <!-- DIVIDER -->
+
     <div class="divider">
         <span>OR</span>
     </div>
-    
-    <!-- LOGIN BUTTON -->
+
     <button
         class="btn btn-secondary"
+        type="button"
         onclick="window.location.href='screen2.html'"
     >
         Already have an account? Login
     </button>
-    
-    <!-- MESSAGE -->
-    <div id="message" class="message"></div>
+
+    <div id="message" class="message" role="alert"></div>
 
 </div>
 
 <script>
+function togglePassword(fieldId, button) {
+    const field = document.getElementById(fieldId);
 
-document.getElementById('signupForm').addEventListener('submit', async function(e) {
+    if (field.type === "password") {
+        field.type = "text";
+        button.textContent = "🙈";
+        button.setAttribute("aria-label", "Hide password");
+    } else {
+        field.type = "password";
+        button.textContent = "👁";
+        button.setAttribute("aria-label", "Show password");
+    }
+}
 
+function showMessage(type, message) {
+    const box = document.getElementById("message");
+    box.className = "message " + type;
+    box.textContent = message;
+}
+
+function clearErrors() {
+    document.querySelectorAll(".field-error").forEach(el => {
+        el.classList.remove("field-error");
+    });
+}
+
+function markError(element) {
+    if (element) element.classList.add("field-error");
+}
+
+document.getElementById("signupForm").addEventListener("submit", async function(e) {
     e.preventDefault();
 
-    const password =
-        document.getElementById('password').value;
-
-    const confirmPassword =
-        document.getElementById('confirm_password').value;
-
-    const phoneInput =
-        document.getElementById('phone');
-
-    const countryCode =
-        document.getElementById('country_code').value;
-
-    const emailInput =
-        document.getElementById('email');
-
-    const messageDiv =
-        document.getElementById('message');
-
-
-    /* =========================================
-       CLEAR PREVIOUS MESSAGE
-    ========================================= */
+    clearErrors();
+    const messageDiv = document.getElementById("message");
+    const submitBtn = document.getElementById("submitBtn");
+    const submitText = document.getElementById("submitText");
 
     messageDiv.className = "message";
-    messageDiv.innerText = "";
+    messageDiv.textContent = "";
 
+    const firstnameInput = document.getElementById("firstname");
+    const lastnameInput = document.getElementById("lastname");
+    const emailInput = document.getElementById("email");
+    const phoneInput = document.getElementById("phone");
+    const countryCode = document.getElementById("country_code").value;
+    const userTypeInput = document.getElementById("user_type");
+    const passwordInput = document.getElementById("password");
+    const confirmInput = document.getElementById("confirm_password");
 
-    /* =========================================
-       VALIDATE PASSWORDS
-    ========================================= */
+    const firstname = firstnameInput.value.trim();
+    const lastname = lastnameInput.value.trim();
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+    const confirmPassword = confirmInput.value;
+    const userType = userTypeInput.value;
 
-    if (password !== confirmPassword) {
-
-        messageDiv.className = "message error";
-
-        messageDiv.innerText =
-            "❌ Passwords do not match!";
-
+    if (!firstname) {
+        showMessage("error", "❌ First Name is required.");
+        markError(firstnameInput);
+        firstnameInput.focus();
         return;
     }
 
-
-    /* =========================================
-       VALIDATE PASSWORD LENGTH
-    ========================================= */
-
-    if (password.length < 6) {
-
-        messageDiv.className = "message error";
-
-        messageDiv.innerText =
-            "❌ Password must be at least 6 characters";
-
+    if (!/^[A-Za-zÀ-ÖØ-öø-ÿ' -]{2,100}$/.test(firstname)) {
+        showMessage("error", "❌ Please enter a valid first name.");
+        markError(firstnameInput);
+        firstnameInput.focus();
         return;
     }
 
-
-    /* =========================================
-       GET PHONE NUMBER
-    ========================================= */
-
-    let phone =
-        phoneInput.value.trim();
-
-
-    /* =========================================
-       PHONE REQUIRED
-    ========================================= */
-
-    if (!phone) {
-
-        messageDiv.className = "message error";
-
-        messageDiv.innerText =
-            "❌ Phone number is required";
-
-        phoneInput.focus();
-
+    if (!lastname) {
+        showMessage("error", "❌ Last Name is required.");
+        markError(lastnameInput);
+        lastnameInput.focus();
         return;
     }
 
+    if (!/^[A-Za-zÀ-ÖØ-öø-ÿ' -]{2,100}$/.test(lastname)) {
+        showMessage("error", "❌ Please enter a valid last name.");
+        markError(lastnameInput);
+        lastnameInput.focus();
+        return;
+    }
 
-    /* =========================================
-       REMOVE EVERYTHING EXCEPT NUMBERS
-       
-       Example:
-       0772 123-456
-       becomes:
-       0772123456
-    ========================================= */
+    if (email && !emailInput.validity.valid) {
+        showMessage("error", "❌ Please enter a valid email address.");
+        markError(emailInput);
+        emailInput.focus();
+        return;
+    }
 
-    phone = phone.replace(/\D/g, "");
-
-
-    /* =========================================
-       REMOVE ALL LEADING ZEROS
-       
-       Example:
-       0772123456
-       becomes:
-       772123456
-       
-       00772123456
-       also becomes:
-       772123456
-    ========================================= */
-
+    let phone = phoneInput.value.trim().replace(/\D/g, "");
     phone = phone.replace(/^0+/, "");
 
-
-    /* =========================================
-       CHECK PHONE AFTER CLEANING
-    ========================================= */
-
-    if (!phone || phone.length < 7) {
-
-        messageDiv.className = "message error";
-
-        messageDiv.innerText =
-            "❌ Please enter a valid phone number";
-
+    if (!phone || phone.length < 7 || phone.length > 15) {
+        showMessage("error", "❌ Please enter a valid phone number.");
+        markError(phoneInput);
         phoneInput.focus();
-
         return;
     }
 
-
-    /* =========================================
-       CREATE INTERNATIONAL PHONE NUMBER
-       
-       Example:
-       
-       Country code = +256
-       Number = 772123456
-       
-       Result:
-       +256772123456
-    ========================================= */
-
-    const fullPhone =
-        countryCode + phone;
-
-
-    /* =========================================
-       PUT NORMALIZED NUMBER BACK INTO FORM
-       
-       This ensures signup.php receives:
-       
-       +256772123456
-       
-       instead of:
-       
-       0772123456
-    ========================================= */
-
-    phoneInput.value = fullPhone;
-
-
-    /* =========================================
-       GET FORM DATA
-    ========================================= */
-
-    const formData =
-        new FormData(this);
-
-
-    /* =========================================
-       EMAIL IS OPTIONAL
-       
-       If empty, send an empty value.
-    ========================================= */
-
-    if (emailInput.value.trim() === "") {
-
-        formData.set("email", "");
-
-    } else {
-
-        formData.set(
-            "email",
-            emailInput.value.trim()
-        );
-
+    if (!userType) {
+        showMessage("error", "❌ Please select a user type.");
+        markError(userTypeInput);
+        userTypeInput.focus();
+        return;
     }
 
+    if (password.length < 8) {
+        showMessage("error", "❌ Password must be at least 8 characters.");
+        markError(passwordInput);
+        passwordInput.focus();
+        return;
+    }
 
-    /* =========================================
-       SEND NORMALIZED PHONE
-    ========================================= */
+    if (!/[A-Z]/.test(password)) {
+        showMessage("error", "❌ Password must contain at least one uppercase letter.");
+        markError(passwordInput);
+        passwordInput.focus();
+        return;
+    }
 
-    formData.set(
-        "phone",
-        fullPhone
-    );
+    if (!/[a-z]/.test(password)) {
+        showMessage("error", "❌ Password must contain at least one lowercase letter.");
+        markError(passwordInput);
+        passwordInput.focus();
+        return;
+    }
 
+    if (!/[0-9]/.test(password)) {
+        showMessage("error", "❌ Password must contain at least one number.");
+        markError(passwordInput);
+        passwordInput.focus();
+        return;
+    }
 
-    /* =========================================
-       SUBMIT TO PHP
-    ========================================= */
+    if (!/[^A-Za-z0-9]/.test(password)) {
+        showMessage("error", "❌ Password must contain at least one special character.");
+        markError(passwordInput);
+        passwordInput.focus();
+        return;
+    }
+
+    if (password !== confirmPassword) {
+        showMessage("error", "❌ Passwords do not match.");
+        markError(confirmInput);
+        confirmInput.focus();
+        return;
+    }
+
+    const fullPhone = countryCode + phone;
+    const formData = new FormData(this);
+
+    formData.set("firstname", firstname);
+    formData.set("lastname", lastname);
+    formData.set("email", email);
+    formData.set("phone", fullPhone);
+    formData.set("country_code", countryCode);
+    formData.set("user_type", userType);
+    formData.set("password", password);
+    formData.set("confirm_password", confirmPassword);
+
+    submitBtn.disabled = true;
+    submitText.textContent = "Creating Account...";
 
     try {
-
-        const response = await fetch(
-            'signup.php',
-            {
-                method: 'POST',
-                body: formData
+        const response = await fetch("signup.php", {
+            method: "POST",
+            body: formData,
+            headers: {
+                "Accept": "application/json"
             }
-        );
+        });
 
-
-        /* =====================================
-           READ JSON RESPONSE
-        ===================================== */
-
-        const result =
-            await response.json();
-
-
-        /* =====================================
-           SUCCESS
-        ===================================== */
+        const result = await response.json();
 
         if (result.success) {
-
-            messageDiv.className =
-                "message success";
-
-            messageDiv.innerText =
-                "✅ " + result.message;
-
-
-            /* =================================
-               REDIRECT AFTER SUCCESS
-            ================================= */
+            showMessage("success", "✅ " + result.message);
 
             setTimeout(() => {
-
-                window.location.href =
-                    result.redirect;
-
-            }, 1500);
-
+                window.location.href = result.redirect || "screen2.html";
+            }, 1200);
+        } else {
+            showMessage("error", "❌ " + (result.message || "Registration failed."));
         }
 
-
-        /* =====================================
-           ERROR FROM PHP
-        ===================================== */
-
-        else {
-
-            messageDiv.className =
-                "message error";
-
-            messageDiv.innerText =
-                "❌ " + result.message;
-
-        }
-
+    } catch (error) {
+        console.error("Signup error:", error);
+        showMessage("error", "❌ Unable to connect to the server. Please try again.");
+    } finally {
+        submitBtn.disabled = false;
+        submitText.textContent = "Sign Up";
     }
-
-
-    /* =========================================
-       NETWORK / SERVER ERROR
-    ========================================= */
-
-    catch (error) {
-
-        console.error(
-            "Signup error:",
-            error
-        );
-
-        messageDiv.className =
-            "message error";
-
-        messageDiv.innerText =
-            "❌ Network error. Please try again.";
-
-    }
-
 });
-
 </script>
 
 </body>
