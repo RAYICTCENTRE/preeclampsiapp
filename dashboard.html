@@ -2213,32 +2213,78 @@ function formatDate(
 
 function fetchData(){
 
-    fetch(
-        'VisitSummary.php?_=' + Date.now(),
-        {
-            cache:'no-store'
-        }
-    )
-
-    .then(
-        response => {
-
+    Promise.all([
+        fetch(
+            'VisitSummary.php?_=' + Date.now(),
+            { cache:'no-store' }
+        ).then(response => {
             if(!response.ok){
-
                 throw new Error(
-                    'Server returned ' +
+                    'VisitSummary.php returned HTTP ' +
                     response.status
                 );
-
             }
-
             return response.json();
+        }),
 
-        }
-    )
+        /*
+         * IMPORTANT:
+         * Pregnancy data belongs to user_profiles.
+         * Load it directly rather than assuming VisitSummary.php
+         * exposes last_period/expected_delivery.
+         */
+        fetch(
+            'dashboard_pregnancy.php?_=' + Date.now(),
+            { cache:'no-store' }
+        ).then(response => {
+            if(!response.ok){
+                throw new Error(
+                    'dashboard_pregnancy.php returned HTTP ' +
+                    response.status
+                );
+            }
+            return response.json();
+        })
+    ])
 
     .then(
-        data => {
+        ([data, pregnancyResponse]) => {
+
+            /*
+             * Use the direct user_profiles response as the
+             * authoritative source for pregnancy information.
+             */
+            const pregnancyData =
+                pregnancyResponse &&
+                pregnancyResponse.success
+                    ? pregnancyResponse
+                    : {};
+
+            const pregnancyProfile =
+                pregnancyData.profile ||
+                {};
+
+            /*
+             * Merge profile pregnancy values into the
+             * VisitSummary response without disturbing
+             * the existing visits/risk data.
+             */
+            data.profile =
+                pregnancyProfile;
+
+            if(
+                pregnancyProfile.last_period
+            ){
+                data.last_period =
+                    pregnancyProfile.last_period;
+            }
+
+            if(
+                pregnancyProfile.expected_delivery
+            ){
+                data.expected_delivery =
+                    pregnancyProfile.expected_delivery;
+            }
 
             if(data.error){
 
@@ -2462,7 +2508,7 @@ function fetchData(){
         error => {
 
             console.error(
-                'MotherCare dashboard error:',
+                'MotherCare dashboard data error:',
                 error
             );
 
