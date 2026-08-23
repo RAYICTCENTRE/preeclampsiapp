@@ -372,6 +372,10 @@ a{
     background:linear-gradient(135deg,#536575,#697c8e);
 }
 
+.signout{
+    background:linear-gradient(135deg,#c82333,#dc3545);
+}
+
 
 /* =========================================================
    SYNC STATUS
@@ -861,7 +865,7 @@ a{
     }
 
     .action-grid{
-        grid-template-columns:repeat(5,1fr);
+        grid-template-columns:repeat(3,1fr);
     }
 
     .action-card{
@@ -1297,6 +1301,27 @@ a{
                 <i class="fas fa-sync-alt"></i>
             </div>
 
+        </button>
+
+        <!-- 6. SIGN OUT -->
+        <button
+            type="button"
+            class="action-card signout"
+            onclick="logoutNow()"
+            style="border:0;text-align:left;cursor:pointer;"
+        >
+            <div class="action-icon">
+                <i class="fas fa-right-from-bracket"></i>
+            </div>
+
+            <div>
+                <h4>Sign Out</h4>
+                <p>Securely leave your MotherCare account</p>
+            </div>
+
+            <div class="action-arrow">
+                <i class="fas fa-sign-out-alt"></i>
+            </div>
         </button>
 
     </section>
@@ -1988,6 +2013,58 @@ function riskClass(
    PREGNANCY WEEK CALCULATION
 ========================================================= */
 
+function parseDatabaseDate(value){
+
+    if(!value){
+        return null;
+    }
+
+    const raw =
+        String(value)
+            .trim()
+            .substring(0,10);
+
+    const match =
+        raw.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+
+    if(match){
+
+        const year =
+            Number(match[1]);
+
+        const month =
+            Number(match[2]) - 1;
+
+        const day =
+            Number(match[3]);
+
+        const date =
+            new Date(
+                year,
+                month,
+                day
+            );
+
+        if(
+            date.getFullYear() === year &&
+            date.getMonth() === month &&
+            date.getDate() === day
+        ){
+            return date;
+        }
+
+        return null;
+    }
+
+    const date =
+        new Date(value);
+
+    return isNaN(date.getTime())
+        ? null
+        : date;
+}
+
+
 function calculatePregnancyWeeks(
     lastPeriod
 ){
@@ -2000,16 +2077,12 @@ function calculatePregnancyWeeks(
 
 
     const lmp =
-        new Date(
+        parseDatabaseDate(
             lastPeriod
         );
 
 
-    if(
-        isNaN(
-            lmp.getTime()
-        )
-    ){
+    if(!lmp){
 
         return 'Not Set';
 
@@ -2141,7 +2214,7 @@ function formatDate(
 function fetchData(){
 
     fetch(
-        'VisitSummary.php',
+        'VisitSummary.php?_=' + Date.now(),
         {
             cache:'no-store'
         }
@@ -2254,14 +2327,69 @@ function fetchData(){
 
 
             /*
-             * EDD
+             * CURRENT PREGNANCY OVERVIEW
+             *
+             * The profile may come back either at the top level
+             * or inside profile/user_profile/userProfile.
+             * Read all supported names so the dashboard is not
+             * dependent on one exact VisitSummary.php response shape.
              */
 
-            const expectedDelivery =
-                data.expected_delivery &&
-                data.expected_delivery !== 'N/A'
-                ? data.expected_delivery
-                : null;
+            const profile =
+                data.profile ||
+                data.user_profile ||
+                data.userProfile ||
+                {};
+
+
+            const lastPeriod =
+                data.last_period ||
+                data.last_menstrual_period ||
+                data.lmp ||
+                profile.last_period ||
+                profile.last_menstrual_period ||
+                profile.lmp ||
+                null;
+
+
+            let expectedDelivery =
+                data.expected_delivery ||
+                data.expectedDelivery ||
+                data.edd ||
+                data.due_date ||
+                data.expected_delivery_date ||
+                profile.expected_delivery ||
+                profile.expectedDelivery ||
+                profile.edd ||
+                profile.due_date ||
+                profile.expected_delivery_date ||
+                null;
+
+
+            /*
+             * If the database has LMP but the API did not return EDD,
+             * calculate EDD from the stored LMP (40 weeks / 280 days).
+             */
+            if(!expectedDelivery && lastPeriod){
+
+                const lmpDate =
+                    parseDatabaseDate(lastPeriod);
+
+                if(lmpDate){
+
+                    const calculatedEDD =
+                        new Date(lmpDate);
+
+                    calculatedEDD.setDate(
+                        calculatedEDD.getDate() + 280
+                    );
+
+                    expectedDelivery =
+                        calculatedEDD
+                            .toISOString()
+                            .substring(0,10);
+                }
+            }
 
 
             const formattedEDD =
@@ -2284,21 +2412,6 @@ function fetchData(){
                 )
                 .textContent =
                 formattedEDD;
-
-
-            /*
-             * LMP
-             *
-             * VisitSummary.php may return
-             * last_period or last_menstrual_period.
-             */
-
-            const lastPeriod =
-                data.last_period ||
-                data.last_menstrual_period ||
-                data.lmp ||
-                data.profile?.last_period ||
-                null;
 
 
             document
@@ -2363,7 +2476,21 @@ function fetchData(){
                     'weeksPregnant'
                 )
                 .textContent =
-                '—';
+                'Not available';
+
+            document
+                .getElementById(
+                    'eddDate'
+                )
+                .textContent =
+                'Not available';
+
+            document
+                .getElementById(
+                    'eddDateCard'
+                )
+                .textContent =
+                'Not available';
 
         }
     );
