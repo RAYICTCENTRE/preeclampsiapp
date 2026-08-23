@@ -50,7 +50,7 @@ if (
 
     // Always return to login
     header(
-        "Location: screen2.html"
+        "Location: screen4.php"
     );
 
     exit();
@@ -66,7 +66,7 @@ if (
 if (!isset($_SESSION['user_id'])) {
 
     header(
-        "Location: screen2.html"
+        "Location: screen4.php"
     );
 
     exit();
@@ -451,7 +451,7 @@ if (!empty($errors)) {
 
 
     header(
-        "Location: scren2.html"
+        "Location: screen4.php"
     );
 
     exit();
@@ -476,24 +476,24 @@ try {
     |--------------------------------------------------------------------------
     */
 
-    $update_user =
-        $conn->prepare(
-            "UPDATE users
-             SET
-                firstname = ?,
-                lastname = ?,
-                phone = ?
-             WHERE id = ?"
-        );
-
+    
+    /*
+     * Update basic user information.
+     */
+    $update_user = $conn->prepare(
+        "UPDATE users
+         SET firstname = ?,
+             lastname = ?,
+             phone = ?
+         WHERE id = ?"
+    );
 
     if (!$update_user) {
-
         throw new Exception(
-            "Failed to prepare user update."
+            "Failed to prepare user update: " .
+            $conn->error
         );
     }
-
 
     $update_user->bind_param(
         "sssi",
@@ -503,107 +503,81 @@ try {
         $user_id
     );
 
-
     if (!$update_user->execute()) {
-
         throw new Exception(
             "Failed to update user information: " .
             $update_user->error
         );
     }
 
-
     $update_user->close();
 
 
     /*
-    |--------------------------------------------------------------------------
-    | 2. CHECK USER PROFILE
-    |--------------------------------------------------------------------------
-    */
-
-    $check =
-        $conn->prepare(
-            "SELECT id
-             FROM user_profiles
-             WHERE user_id = ?
-             LIMIT 1"
-        );
-
+     * Check whether the profile already exists.
+     */
+    $check = $conn->prepare(
+        "SELECT id
+         FROM user_profiles
+         WHERE user_id = ?
+         LIMIT 1"
+    );
 
     if (!$check) {
-
         throw new Exception(
-            "Failed to check user profile."
+            "Failed to prepare profile check: " .
+            $conn->error
         );
     }
 
-
-    $check->bind_param(
-        "i",
-        $user_id
-    );
-
+    $check->bind_param("i", $user_id);
 
     if (!$check->execute()) {
-
         throw new Exception(
             "Failed to check user profile: " .
             $check->error
         );
     }
 
-
-    $result =
-        $check->get_result();
-
+    $result = $check->get_result();
 
     $profile_exists =
         $result &&
         $result->num_rows > 0;
 
-
     $check->close();
 
 
     /*
-    |--------------------------------------------------------------------------
-    | 3. UPDATE EXISTING PROFILE
-    |--------------------------------------------------------------------------
-    */
-
+     * Update existing profile.
+     */
     if ($profile_exists) {
 
-        $stmt =
-            $conn->prepare(
-                "UPDATE user_profiles
-                 SET
-                    age = ?,
-                    nationality = ?,
-                    district = ?,
-                    sub_county = ?,
-                    parish = ?,
-                    village = ?,
-                    nearest_health = ?,
-                    kin_name = ?,
-                    kin_relationship = ?,
-                    kin_contact = ?,
-                    kin_country_code = ?,
-                    last_period = ?,
-                    expected_delivery = ?,
-                    updated_at = NOW()
-                 WHERE user_id = ?"
-            );
-
+        $stmt = $conn->prepare(
+            "UPDATE user_profiles
+             SET
+                 age = ?,
+                 nationality = ?,
+                 district = ?,
+                 sub_county = ?,
+                 parish = ?,
+                 village = ?,
+                 nearest_health = ?,
+                 kin_name = ?,
+                 kin_relationship = ?,
+                 kin_contact = ?,
+                 kin_country_code = ?,
+                 last_period = ?,
+                 expected_delivery = ?
+             WHERE user_id = ?"
+        );
 
         if (!$stmt) {
-
             throw new Exception(
                 "Failed to prepare profile update: " .
                 $conn->error
             );
         }
-
 
         $stmt->bind_param(
             "issssssssssssi",
@@ -623,74 +597,47 @@ try {
             $user_id
         );
 
-
         if (!$stmt->execute()) {
-
             throw new Exception(
                 "Failed to update profile: " .
                 $stmt->error
             );
         }
 
-
         $stmt->close();
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | 4. CREATE NEW PROFILE
-    |--------------------------------------------------------------------------
-    */
 
     } else {
 
-        $stmt =
-            $conn->prepare(
-                "INSERT INTO user_profiles
-                (
-                    user_id,
-                    age,
-                    nationality,
-                    district,
-                    sub_county,
-                    parish,
-                    village,
-                    nearest_health,
-                    kin_name,
-                    kin_relationship,
-                    kin_contact,
-                    kin_country_code,
-                    last_period,
-                    expected_delivery
-                )
-                VALUES
-                (
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?
-                )"
-            );
-
+        /*
+         * Create new profile.
+         */
+        $stmt = $conn->prepare(
+            "INSERT INTO user_profiles
+            (
+                user_id,
+                age,
+                nationality,
+                district,
+                sub_county,
+                parish,
+                village,
+                nearest_health,
+                kin_name,
+                kin_relationship,
+                kin_contact,
+                kin_country_code,
+                last_period,
+                expected_delivery
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        );
 
         if (!$stmt) {
-
             throw new Exception(
                 "Failed to prepare profile creation: " .
                 $conn->error
             );
         }
-
 
         $stmt->bind_param(
             "iissssssssssss",
@@ -710,27 +657,21 @@ try {
             $expected_delivery
         );
 
-
         if (!$stmt->execute()) {
-
             throw new Exception(
                 "Failed to create profile: " .
                 $stmt->error
             );
         }
 
-
         $stmt->close();
     }
 
 
     /*
-    |--------------------------------------------------------------------------
-    | 5. COMMIT
-    |--------------------------------------------------------------------------
-    */
-
-    $conn->commit();
+     * Commit transaction.
+     */
+$conn->commit();
 
 
     /*
@@ -781,7 +722,7 @@ try {
     */
 
     $_SESSION['profile_errors'] = [
-        "An error occurred while saving your profile. Please try again."
+        "Profile could not be saved: " . $e->getMessage()
     ];
 
 
@@ -790,7 +731,7 @@ try {
 
 
     header(
-        "Location: screen2.html"
+        "Location: screen4.php"
     );
 
     exit();
