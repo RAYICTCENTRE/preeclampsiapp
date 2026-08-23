@@ -381,7 +381,7 @@ switch ($user['user_type']) {
         ) {
             $redirect = "dashboard.html";
         } else {
-            $redirect = "screen4.php";
+            $redirect = "screen4.html";
         }
 
         break;
