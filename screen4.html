@@ -485,6 +485,7 @@
                 <select name="county" id="county" required>
                     <option value="">Select district or city first</option>
                 </select>
+                <input type="hidden" name="county" id="countyFallback" value="" disabled>
             </div>
 
             <div class="form-row">
@@ -753,6 +754,9 @@ const districtSelect =
 const countySelect =
     document.getElementById('county');
 
+const countyFallback =
+    document.getElementById('countyFallback');
+
 const subCountySelect =
     document.getElementById('subCounty');
 
@@ -815,6 +819,10 @@ function resetLowerLocations() {
         '<option value="">Select parish/ward first</option>';
 
     countySelect.disabled = true;
+    countySelect.required = true;
+    countyFallback.disabled = true;
+    countyFallback.value = '';
+
     subCountySelect.disabled = true;
     parishSelect.disabled = true;
     villageSelect.disabled = true;
@@ -898,6 +906,9 @@ districtSelect.addEventListener(
             );
 
             countySelect.disabled = false;
+            countySelect.required = true;
+            countyFallback.disabled = true;
+            countyFallback.value = '';
 
             locationStatus.textContent =
                 'Now select the county or municipality.';
@@ -907,7 +918,15 @@ districtSelect.addEventListener(
             countySelect.innerHTML =
                 '<option value="">Not applicable for this city</option>';
 
-            countySelect.disabled = false;
+            // County/Municipality does not apply to this city.
+            // Disable it and remove the HTML required constraint so
+            // the user can continue without selecting it.
+            countySelect.value = '';
+            countySelect.required = false;
+            countySelect.disabled = true;
+
+            countyFallback.value = '';
+            countyFallback.disabled = false;
 
             fillSelect(
                 subCountySelect,
@@ -923,9 +942,14 @@ districtSelect.addEventListener(
         } else {
 
             countySelect.innerHTML =
-                '<option value="">No lower-level locations found</option>';
+                '<option value="">Not applicable for this location</option>';
 
-            countySelect.disabled = false;
+            countySelect.value = '';
+            countySelect.required = false;
+            countySelect.disabled = true;
+
+            countyFallback.value = '';
+            countyFallback.disabled = false;
         }
 
         updateProgress();
@@ -943,6 +967,12 @@ countySelect.addEventListener(
 
         const county =
             this.value;
+
+        // A selected county means the county field is applicable.
+        countySelect.required = true;
+        countySelect.disabled = false;
+        countyFallback.disabled = true;
+        countyFallback.value = '';
 
         fillSelect(
             subCountySelect,
