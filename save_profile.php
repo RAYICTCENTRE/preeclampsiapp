@@ -451,7 +451,7 @@ if (!empty($errors)) {
 
 
     header(
-        "Location: screen4.php"
+        "Location: scren2.html"
     );
 
     exit();
@@ -790,7 +790,7 @@ try {
 
 
     header(
-        "Location: screen4.php"
+        "Location: screen2.html"
     );
 
     exit();
