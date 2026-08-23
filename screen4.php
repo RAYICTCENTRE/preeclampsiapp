@@ -266,7 +266,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
         $stmt->close();
 
         // Redirect after successful save to prevent duplicate form submission.
-        header('Location: screen4.php?success=1');
+        header('Location: dashboard.html?profile_updated=1');
         exit;
 
     } catch (Throwable $e) {
@@ -1119,7 +1119,7 @@ $completion_percent = $total > 0 ? round(($filled / $total) * 100) : 0;
 
         cancelBtn.addEventListener('click', function() {
             if (confirm('Cancel and go to dashboard? Changes will not be saved.')) {
-                window.location.href = 'dashboard.php';
+                window.location.href = 'dashboard.html';
             }
         });
 
