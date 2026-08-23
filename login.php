@@ -371,14 +371,18 @@ switch ($user['user_type']) {
         $check->close();
 
         /*
-         * If profile is complete, go to dashboard.
-         * Otherwise go to profile setup.
+         * PROFILE EXISTENCE CHECK
+         *
+         * The requirement is simple:
+         * - If a row already exists in user_profiles for this
+         *   authenticated user, send the user to the dashboard.
+         * - If no row exists, send the user to profile setup.
+         *
+         * Do NOT require age, last_period, or any other field
+         * to be non-empty here. A saved profile is considered
+         * sufficient to continue to the dashboard.
          */
-        if (
-            $profile &&
-            !empty($profile['age']) &&
-            !empty($profile['last_period'])
-        ) {
+        if ($profile !== null) {
             $redirect = "dashboard.html";
         } else {
             $redirect = "screen4.html";
