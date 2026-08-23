@@ -626,27 +626,7 @@ input[type="number"] {
 <div class="container">
 
 <h2>Pre-eclampsia Checker</h2>
-
 <p class="subtitle">Early detection saves lives</p>
-
-<!-- OFFLINE / SYNC STATUS -->
-<div id="offlineStatus" style="
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    padding:10px 12px;
-    margin-bottom:14px;
-    border-radius:12px;
-    background:#e8f5e9;
-    border:1px solid #c8e6c9;
-    color:#2e7d32;
-    font-size:12px;
-    font-weight:600;">
-    <span id="connectionText">● Online</span>
-    <span id="syncText">✓ All data synchronized</span>
-</div>
-
 
 <!-- ENTRY BUTTONS -->
 <div class="entry-grid" id="entryGrid">
@@ -859,7 +839,7 @@ input[type="number"] {
 </div>
 
 <div class="disclaimer">
-    ⚠️ This tool is for informational purposes only and does not replace professional medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider. Offline assessments are saved locally and synchronized when Internet returns.
+    ⚠️ This tool is for informational purposes only and does not replace professional medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider.
 </div>
 
 </div>
@@ -998,424 +978,22 @@ const aiStatus = document.getElementById('aiStatus');
 // ============================================
 // LOAD PROFILE - UPDATED FOR EDITABLE FIELDS
 // ============================================
-
-// ============================================
-// OFFLINE STORAGE + SYNCHRONIZATION
-// ============================================
-const MC_DB_NAME = 'MotherCareOfflineDB';
-const MC_DB_VERSION = 1;
-const MC_STORE = 'pendingAssessments';
-
-function openMotherCareDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(MC_DB_NAME, MC_DB_VERSION);
-
-        request.onupgradeneeded = function(event) {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains(MC_STORE)) {
-                const store = db.createObjectStore(MC_STORE, {
-                    keyPath: 'localId',
-                    autoIncrement: true
-                });
-                store.createIndex('status', 'status', { unique: false });
-                store.createIndex('createdAt', 'createdAt', { unique: false });
-            }
-        };
-
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-}
-
-async function savePendingAssessment(payload, localResult) {
-    const db = await openMotherCareDB();
-
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction(MC_STORE, 'readwrite');
-        const store = tx.objectStore(MC_STORE);
-
-        store.add({
-            payload: payload,
-            localResult: localResult,
-            createdAt: new Date().toISOString(),
-            status: 'pending'
-        });
-
-        tx.oncomplete = () => {
-            db.close();
-            updateOfflineStatus();
-            resolve(true);
-        };
-
-        tx.onerror = () => {
-            db.close();
-            reject(tx.error);
-        };
-    });
-}
-
-async function getPendingAssessments() {
-    const db = await openMotherCareDB();
-
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction(MC_STORE, 'readonly');
-        const store = tx.objectStore(MC_STORE);
-        const request = store.getAll();
-
-        request.onsuccess = () => {
-            db.close();
-            resolve(request.result || []);
-        };
-
-        request.onerror = () => {
-            db.close();
-            reject(request.error);
-        };
-    });
-}
-
-async function deletePendingAssessment(localId) {
-    const db = await openMotherCareDB();
-
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction(MC_STORE, 'readwrite');
-        tx.objectStore(MC_STORE).delete(localId);
-
-        tx.oncomplete = () => {
-            db.close();
-            resolve(true);
-        };
-
-        tx.onerror = () => {
-            db.close();
-            reject(tx.error);
-        };
-    });
-}
-
-function cacheProfile(data) {
-    try {
-        localStorage.setItem('mothercare_profile_cache', JSON.stringify({
-            cachedAt: new Date().toISOString(),
-            data: data
-        }));
-    } catch (e) {
-        console.warn('Could not cache profile:', e);
-    }
-}
-
-function getCachedProfile() {
-    try {
-        const raw = localStorage.getItem('mothercare_profile_cache');
-        if (!raw) return null;
-        return JSON.parse(raw).data || null;
-    } catch (e) {
-        return null;
-    }
-}
-
-function updateConnectionUI() {
-    const connectionText = document.getElementById('connectionText');
-    const syncText = document.getElementById('syncText');
-    const panel = document.getElementById('offlineStatus');
-
-    if (!connectionText || !syncText || !panel) return;
-
-    if (navigator.onLine) {
-        connectionText.textContent = '● Online';
-        connectionText.style.color = '#2e7d32';
-        panel.style.background = '#e8f5e9';
-        panel.style.borderColor = '#c8e6c9';
-    } else {
-        connectionText.textContent = '● Offline';
-        connectionText.style.color = '#b45309';
-        panel.style.background = '#fff8e1';
-        panel.style.borderColor = '#ffe082';
-    }
-}
-
-async function updateOfflineStatus() {
-    updateConnectionUI();
-
-    const syncText = document.getElementById('syncText');
-    if (!syncText) return;
-
-    try {
-        const pending = await getPendingAssessments();
-
-        if (pending.length > 0) {
-            syncText.textContent = navigator.onLine
-                ? `↻ ${pending.length} assessment(s) waiting to sync`
-                : `⏳ ${pending.length} assessment(s) saved offline`;
-        } else {
-            syncText.textContent = navigator.onLine
-                ? '✓ All data synchronized'
-                : '✓ No pending data';
-        }
-    } catch (e) {
-        syncText.textContent = navigator.onLine ? 'Online' : 'Offline';
-    }
-}
-
-function calculateOfflineRisk(payload) {
-    // Local rule-based fallback. It is intentionally labeled as offline
-    // because the server/AI prediction is not available without Internet.
-    let score = 0;
-    const symptoms = (payload.symptoms || []).join(' ').toLowerCase();
-
-    const symptomWeights = {
-        'headache': 12,
-        'swelling': 10,
-        'blurred vision': 18,
-        'abdominal pain': 12,
-        'nausea': 4
-    };
-
-    Object.keys(symptomWeights).forEach(symptom => {
-        if (symptoms.includes(symptom)) score += symptomWeights[symptom];
-    });
-
-    const sbp = Number(payload.systolic_bp || 0);
-    const dbp = Number(payload.diastolic_bp || 0);
-
-    if (sbp >= 160 || dbp >= 110) score += 40;
-    else if (sbp >= 140 || dbp >= 90) score += 25;
-    else if (sbp >= 130 || dbp >= 80) score += 10;
-
-    if (payload.proteinuria === 'Yes') score += 25;
-    else if (payload.proteinuria === 'Trace') score += 10;
-
-    if (Number(payload.diabetes) === 1) score += 8;
-    if (Number(payload.previous_pe) === 1) score += 12;
-    if (Number(payload.multiple_pregnancy) === 1) score += 10;
-    if (Number(payload.hypertension) === 1) score += 12;
-
-    const age = Number(payload.maternal_age_yrs || 0);
-    if (age >= 35) score += 8;
-    if (age > 0 && age < 18) score += 5;
-
-    score = Math.min(100, score);
-
-    let level = 'Low';
-    if (score >= 70) level = 'Critical';
-    else if (score >= 50) level = 'High';
-    else if (score >= 25) level = 'Moderate';
-
-    let note = 'Continue routine antenatal care and monitor for warning signs.';
-    if (level === 'Moderate') {
-        note = 'Some risk factors are present. Consider contacting a healthcare provider for further assessment.';
-    } else if (level === 'High') {
-        note = 'Several risk factors are present. Seek assessment from a qualified healthcare provider as soon as possible.';
-    } else if (level === 'Critical') {
-        note = 'High-risk warning signs are present. Seek urgent professional medical assessment.';
-    }
-
-    return {
-        risk: score,
-        level: level,
-        note: note,
-        engine: 'Offline Rule-Based',
-        mode: payload.mode || 'N/A'
-    };
-}
-
-function displayRiskResult(data, isOffline = false) {
-    if (isOffline) {
-        aiStatus.className = 'ai-fallback';
-        aiStatus.innerHTML = '📴 Offline Mode — Local Rule-Based Assessment';
-        aiStatus.style.display = 'block';
-    } else if (data.ai_used === true) {
-        aiStatus.className = 'ai-success';
-        aiStatus.innerHTML = '🤖 AI Model Used (86% accuracy)';
-        aiStatus.style.display = 'block';
-    } else if (data.ai_used === false) {
-        aiStatus.className = 'ai-fallback';
-        aiStatus.innerHTML = '📋 Rule-Based Prediction (Fallback)';
-        aiStatus.style.display = 'block';
-    } else if (data.engine === 'AI') {
-        aiStatus.className = 'ai-success';
-        aiStatus.innerHTML = '🤖 AI Model Used';
-        aiStatus.style.display = 'block';
-    } else if (data.engine === 'PHP Fallback') {
-        aiStatus.className = 'ai-fallback';
-        aiStatus.innerHTML = '📋 Rule-Based Prediction (Fallback)';
-        aiStatus.style.display = 'block';
-    }
-
-    if (data.risk !== undefined && data.level !== undefined) {
-        let resultText = "";
-        resultText += "═══════════════════════════════════\n";
-        resultText += "  RISK ASSESSMENT RESULTS\n";
-        resultText += "═══════════════════════════════════\n\n";
-
-        if (isOffline) {
-            resultText += "📴 Offline Local Assessment\n\n";
-        } else if (data.ai_used === true || data.engine === 'AI') {
-            resultText += "🤖 AI Prediction (86% accuracy)\n\n";
-        } else {
-            resultText += "📋 Rule-Based Prediction (Fallback)\n\n";
-        }
-
-        resultText += "📊 Risk Score: " + data.risk + "%\n";
-        resultText += "📈 Risk Level: " + data.level + "\n";
-        resultText += "🔄 Mode: " + (data.mode || 'N/A') + "\n";
-
-        if (data.bp_reading && data.bp_reading !== "Not measured") {
-            resultText += "❤️ Blood Pressure: " + data.bp_reading + "\n";
-        }
-
-        resultText += "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
-        resultText += data.note || "No additional advice available.";
-
-        if (isOffline) {
-            resultText += "\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
-            resultText += "📌 This assessment was completed offline. ";
-            resultText += "It has been saved on this device and will be synchronized ";
-            resultText += "with the MotherCare database when Internet connection returns.";
-        }
-
-        clinicalNote.value = resultText;
-        clinicalNote.style.borderColor =
-            data.level === 'Low' ? '#2e7d32' :
-            data.level === 'Moderate' ? '#f59e0b' :
-            data.level === 'High' ? '#f97316' : '#dc2626';
-    } else if (data.status === "success" && data.result) {
-        clinicalNote.value = data.result;
-        clinicalNote.style.borderColor = '#2e7d32';
-    } else if (data.success === true) {
-        clinicalNote.value = data.note || data.message || data.result ||
-            "Assessment completed successfully.";
-        clinicalNote.style.borderColor = '#2e7d32';
-    }
-}
-
-async function syncPendingAssessments() {
-    if (!navigator.onLine) return;
-
-    let pending = [];
-    try {
-        pending = await getPendingAssessments();
-    } catch (e) {
-        console.error('Could not read pending assessments:', e);
-        return;
-    }
-
-    if (!pending.length) {
-        updateOfflineStatus();
-        return;
-    }
-
-    const syncText = document.getElementById('syncText');
-    if (syncText) {
-        syncText.textContent = `↻ Synchronizing ${pending.length} assessment(s)...`;
-    }
-
-    for (const item of pending) {
-        try {
-            const response = await fetch("post_symptom_data.php", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify(item.payload)
-            });
-
-            if (!response.ok) {
-                throw new Error("Server returned " + response.status);
-            }
-
-            const data = await response.json();
-
-            if (data.error) {
-                throw new Error(data.error);
-            }
-
-            await deletePendingAssessment(item.localId);
-        } catch (error) {
-            console.warn('Sync stopped; item remains pending:', error);
-            break;
-        }
-    }
-
-    updateOfflineStatus();
-}
-
-window.addEventListener('online', function() {
-    updateConnectionUI();
-    setTimeout(syncPendingAssessments, 1000);
-});
-
-window.addEventListener('offline', function() {
-    updateConnectionUI();
-    updateOfflineStatus();
-});
-
 async function loadUserProfile() {
     try {
         console.log("Loading user profile...");
-
-        if (!navigator.onLine) {
-            const cached = getCachedProfile();
-
-            if (cached && cached.success) {
-                profileData = cached;
-                const age = cached.profile?.age;
-                const last_period = cached.profile?.last_period;
-                const nearest_health = cached.profile?.nearest_health;
-
-                if (age && age > 0) {
-                    maternalAgeInput.value = age;
-                    maternalAgeInput2.value = age;
-                }
-
-                if (last_period) {
-                    const lastPeriodDate = new Date(last_period);
-                    const today = new Date();
-                    const diffDays = Math.floor(
-                        (today - lastPeriodDate) / (1000 * 60 * 60 * 24)
-                    );
-                    const weeks = Math.floor(diffDays / 7);
-
-                    if (weeks >= 4 && weeks <= 42) {
-                        gestationalAgeInput.value = weeks;
-                        gestationalAgeInput2.value = weeks;
-                    }
-                }
-
-                if (nearest_health) {
-                    window.userFacility = nearest_health;
-                }
-
-                aiStatus.className = 'ai-fallback';
-                aiStatus.innerHTML = '📴 Offline — Saved profile loaded from this device';
-                aiStatus.style.display = 'block';
-                return;
-            }
-
-            gestationalAgeInput.placeholder = 'Enter weeks (4-42)';
-            maternalAgeInput.placeholder = 'Enter age';
-            gestationalAgeInput2.placeholder = 'Enter weeks (4-42)';
-            maternalAgeInput2.placeholder = 'Enter age';
-
-            aiStatus.className = 'ai-fallback';
-            aiStatus.innerHTML = '📴 Offline — Enter your pregnancy details manually';
-            aiStatus.style.display = 'block';
-            return;
-        }
-
-        const res = await fetch('get_user_profile.php', { cache: 'no-store' });
-        if (!res.ok) throw new Error("Profile request failed: " + res.status);
-
+        
+        const res = await fetch('get_user_profile.php');
         const data = await res.json();
-
+        
         console.log("Profile data received:", data);
-
+        
         if (data.success) {
             profileData = data;
-            cacheProfile(data);
-
             const age = data.profile?.age;
             const last_period = data.profile?.last_period;
             const nearest_health = data.profile?.nearest_health;
-
+            
+            // Update age - editable
             if (age && age > 0) {
                 maternalAgeInput.value = age;
                 maternalAgeInput2.value = age;
@@ -1423,15 +1001,14 @@ async function loadUserProfile() {
                 maternalAgeInput.placeholder = 'Enter age';
                 maternalAgeInput2.placeholder = 'Enter age';
             }
-
+            
+            // Update gestational age - editable
             if (last_period) {
                 const lastPeriodDate = new Date(last_period);
                 const today = new Date();
-                const diffDays = Math.floor(
-                    (today - lastPeriodDate) / (1000 * 60 * 60 * 24)
-                );
+                const diffDays = Math.floor((today - lastPeriodDate) / (1000 * 60 * 60 * 24));
                 const weeks = Math.floor(diffDays / 7);
-
+                
                 if (weeks >= 4 && weeks <= 42) {
                     gestationalAgeInput.value = weeks;
                     gestationalAgeInput2.value = weeks;
@@ -1443,53 +1020,25 @@ async function loadUserProfile() {
                 gestationalAgeInput.placeholder = 'Enter weeks (4-42)';
                 gestationalAgeInput2.placeholder = 'Enter weeks (4-42)';
             }
-
+            
+            // Store facility
             if (nearest_health) {
                 window.userFacility = nearest_health;
             }
+            
         } else {
             console.error("Error loading profile:", data.error);
+            gestationalAgeInput.placeholder = 'Error loading';
+            maternalAgeInput.placeholder = 'Error loading';
+            gestationalAgeInput2.placeholder = 'Error loading';
+            maternalAgeInput2.placeholder = 'Error loading';
         }
     } catch (e) {
         console.error('Error loading profile:', e);
-
-        // Internet may have disappeared between navigator.onLine and fetch().
-        const cached = getCachedProfile();
-
-        if (cached && cached.success) {
-            profileData = cached;
-
-            const age = cached.profile?.age;
-            const last_period = cached.profile?.last_period;
-
-            if (age && age > 0) {
-                maternalAgeInput.value = age;
-                maternalAgeInput2.value = age;
-            }
-
-            if (last_period) {
-                const lastPeriodDate = new Date(last_period);
-                const today = new Date();
-                const diffDays = Math.floor(
-                    (today - lastPeriodDate) / (1000 * 60 * 60 * 24)
-                );
-                const weeks = Math.floor(diffDays / 7);
-
-                if (weeks >= 4 && weeks <= 42) {
-                    gestationalAgeInput.value = weeks;
-                    gestationalAgeInput2.value = weeks;
-                }
-            }
-
-            aiStatus.className = 'ai-fallback';
-            aiStatus.innerHTML = '📴 Connection unavailable — using saved profile';
-            aiStatus.style.display = 'block';
-        } else {
-            gestationalAgeInput.placeholder = 'Enter weeks (4-42)';
-            maternalAgeInput.placeholder = 'Enter age';
-            gestationalAgeInput2.placeholder = 'Enter weeks (4-42)';
-            maternalAgeInput2.placeholder = 'Enter age';
-        }
+        gestationalAgeInput.placeholder = 'Connection error';
+        maternalAgeInput.placeholder = 'Connection error';
+        gestationalAgeInput2.placeholder = 'Connection error';
+        maternalAgeInput2.placeholder = 'Connection error';
     }
 }
 
@@ -1594,53 +1143,105 @@ resetBtn.onclick = () => {
 async function submitRisk(payload) {
     try {
         console.log("Sending payload:", JSON.stringify(payload, null, 2));
-
-        // ONLINE: use the existing server/AI prediction.
-        if (navigator.onLine) {
-            try {
-                const response = await fetch("post_symptom_data.php", {
-                    method: "POST",
-                    headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    throw new Error("Server returned " + response.status);
-                }
-
-                const data = await response.json();
-
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
-                displayRiskResult(data, false);
-                updateOfflineStatus();
-                return;
-            } catch (onlineError) {
-                console.warn("Online submission failed. Switching to offline mode:", onlineError);
-                // Fall through to offline processing.
-            }
+        
+        const response = await fetch("post_symptom_data.php", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+            throw new Error("Server returned " + response.status);
         }
-
-        // OFFLINE/FALLBACK: calculate locally and queue the original payload.
-        const localResult = calculateOfflineRisk(payload);
-
-        await savePendingAssessment(payload, localResult);
-
-        displayRiskResult(localResult, true);
-        updateOfflineStatus();
-
+        
+        const data = await response.json();
+        console.log("Response data:", data);
+        
+        // Check for errors
+        if (data.error) {
+            clinicalNote.value = "❌ Error: " + data.error;
+            aiStatus.className = 'ai-error';
+            aiStatus.innerHTML = '⚠️ Error occurred during prediction';
+            aiStatus.style.display = 'block';
+            return;
+        }
+        
+        // Display AI status
+        if (data.ai_used === true) {
+            aiStatus.className = 'ai-success';
+            aiStatus.innerHTML = '🤖 AI Model Used (86% accuracy)';
+            aiStatus.style.display = 'block';
+        } else if (data.ai_used === false) {
+            aiStatus.className = 'ai-fallback';
+            aiStatus.innerHTML = '📋 Rule-Based Prediction (Fallback)';
+            aiStatus.style.display = 'block';
+        } else if (data.engine === 'AI') {
+            aiStatus.className = 'ai-success';
+            aiStatus.innerHTML = '🤖 AI Model Used';
+            aiStatus.style.display = 'block';
+        } else if (data.engine === 'PHP Fallback') {
+            aiStatus.className = 'ai-fallback';
+            aiStatus.innerHTML = '📋 Rule-Based Prediction (Fallback)';
+            aiStatus.style.display = 'block';
+        }
+        
+        // Display results
+        if (data.risk !== undefined && data.level !== undefined) {
+            let resultText = "";
+            resultText += "═══════════════════════════════════\n";
+            resultText += "  RISK ASSESSMENT RESULTS\n";
+            resultText += "═══════════════════════════════════\n\n";
+            
+            if (data.ai_used === true || data.engine === 'AI') {
+                resultText += "🤖 AI Prediction (86% accuracy)\n\n";
+            } else {
+                resultText += "📋 Rule-Based Prediction (Fallback)\n\n";
+            }
+            
+            resultText += "📊 Risk Score: " + data.risk + "%\n";
+            resultText += "📈 Risk Level: " + data.level + "\n";
+            resultText += "🔄 Mode: " + (data.mode || 'N/A') + "\n";
+            if (data.bp_reading && data.bp_reading !== "Not measured") {
+                resultText += "❤️ Blood Pressure: " + data.bp_reading + "\n";
+            }
+            resultText += "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
+            resultText += data.note || "No additional advice available.";
+            
+            clinicalNote.value = resultText;
+            clinicalNote.style.borderColor = 
+                data.level === 'Low' ? '#2e7d32' :
+                data.level === 'Moderate' ? '#f59e0b' :
+                data.level === 'High' ? '#f97316' : '#dc2626';
+        } else if (data.status === "success" && data.result) {
+            let resultText = "";
+            resultText += "═══════════════════════════════════\n";
+            resultText += "  RISK ASSESSMENT RESULTS\n";
+            resultText += "═══════════════════════════════════\n\n";
+            
+            resultText += data.engine === "AI" ? "🤖 AI Prediction\n\n" : "📋 Rule-Based Prediction\n\n";
+            resultText += data.result;
+            
+            clinicalNote.value = resultText;
+            clinicalNote.style.borderColor = '#2e7d32';
+        } else if (data.success === true) {
+            let resultText = "";
+            resultText += "═══════════════════════════════════\n";
+            resultText += "  RISK ASSESSMENT RESULTS\n";
+            resultText += "═══════════════════════════════════\n\n";
+            resultText += data.note || data.message || data.result || "Assessment completed successfully.";
+            clinicalNote.value = resultText;
+            clinicalNote.style.borderColor = '#2e7d32';
+        } else {
+            clinicalNote.value = "⚠️ Received response from server but couldn't parse results.\n\n" + JSON.stringify(data, null, 2);
+        }
+        
     } catch (error) {
-        console.error("Assessment error:", error);
-
-        clinicalNote.value =
-            "❌ Could not complete the assessment.\n\n" +
-            error.message;
-
+        console.error("Error:", error);
+        clinicalNote.value = "❌ Server error. Please try again.\n\n" + error.message;
         aiStatus.className = 'ai-error';
-        aiStatus.innerHTML = '❌ Unable to complete assessment';
+        aiStatus.innerHTML = '❌ Connection error';
         aiStatus.style.display = 'block';
+        alert("Server error. Please try again.");
     }
 }
 
@@ -1743,44 +1344,10 @@ document.getElementById('submitClinic').onclick = async () => {
 // ============================================
 // INITIALIZE
 // ============================================
-
-// ============================================
-// SERVICE WORKER REGISTRATION
-// ============================================
-async function registerMotherCareServiceWorker() {
-    if (!('serviceWorker' in navigator)) {
-        console.warn('Service workers are not supported in this browser/WebView.');
-        return;
-    }
-
-    try {
-        const registration = await navigator.serviceWorker.register(
-            './service-worker.js',
-            { scope: './' }
-        );
-
-        console.log(
-            'MotherCare offline service worker registered:',
-            registration.scope
-        );
-    } catch (error) {
-        console.error(
-            'MotherCare service worker registration failed:',
-            error
-        );
-    }
-}
-
 document.addEventListener('DOMContentLoaded', function() {
-    updateConnectionUI();
-    updateOfflineStatus();
     loadUserProfile();
-    if (navigator.onLine) {
-        setTimeout(syncPendingAssessments, 1200);
-    }
-
     console.log('Pre-eclampsia Checker loaded.');
-    console.log('Offline assessment and synchronization enabled.');
+    console.log('Symptoms are now optional. Age and Gestational Age are editable.');
 });
 </script>
 
