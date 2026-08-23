@@ -483,28 +483,28 @@
 
             <div class="form-row">
                 <label>County / Municipality</label>
-                <select name="county" id="county" required>
+                <select name="county" id="county">
                     <option value="">Select district or city first</option>
                 </select>
             </div>
 
             <div class="form-row">
                 <label>Sub County / Town Council / Division</label>
-                <select name="subCounty" id="subCounty" required>
+                <select name="subCounty" id="subCounty">
                     <option value="">Select county/municipality first</option>
                 </select>
             </div>
 
             <div class="form-row">
                 <label>Parish / Ward</label>
-                <select name="parish" id="parish" required>
+                <select name="parish" id="parish">
                     <option value="">Select sub county first</option>
                 </select>
             </div>
 
             <div class="form-row">
                 <label>Village</label>
-                <select name="village" id="village" required>
+                <select name="village" id="village">
                     <option value="">Select parish first</option>
                 </select>
             </div>
@@ -822,6 +822,34 @@ function resetLowerLocations() {
     subCountySelect.disabled = true;
     parishSelect.disabled = true;
     villageSelect.disabled = true;
+
+    setLocationRequiredState();
+}
+
+
+function setLocationRequiredState() {
+
+    // A level is required only when it actually applies.
+    // This prevents "Not applicable for this city" from blocking Save.
+    countySelect.required =
+        !countySelect.disabled &&
+        countySelect.options.length > 1 &&
+        countySelect.options[0].value !== '';
+
+    subCountySelect.required =
+        !subCountySelect.disabled &&
+        subCountySelect.options.length > 1 &&
+        subCountySelect.options[0].value !== '';
+
+    parishSelect.required =
+        !parishSelect.disabled &&
+        parishSelect.options.length > 1 &&
+        parishSelect.options[0].value !== '';
+
+    villageSelect.required =
+        !villageSelect.disabled &&
+        villageSelect.options.length > 1 &&
+        villageSelect.options[0].value !== '';
 }
 
 
@@ -871,6 +899,8 @@ districtSelect.addEventListener(
 
         if (!district) {
 
+            setLocationRequiredState();
+
             updateProgress();
             return;
         }
@@ -879,6 +909,7 @@ districtSelect.addEventListener(
             UGANDA_LOCATION_DATA[district];
 
         if (!districtData) {
+            setLocationRequiredState();
             updateProgress();
             return;
         }
@@ -911,7 +942,7 @@ districtSelect.addEventListener(
             countySelect.innerHTML =
                 '<option value="">Not applicable for this city</option>';
 
-            countySelect.disabled = false;
+            countySelect.disabled = true;
 
             fillSelect(
                 subCountySelect,
@@ -927,10 +958,12 @@ districtSelect.addEventListener(
         } else {
 
             countySelect.innerHTML =
-                '<option value="">No lower-level locations found</option>';
+                '<option value="">Not applicable for this area</option>';
 
-            countySelect.disabled = false;
+            countySelect.disabled = true;
         }
+
+        setLocationRequiredState();
 
         updateProgress();
     }
@@ -970,6 +1003,7 @@ countySelect.addEventListener(
         villageSelect.disabled = true;
 
         if (!county) {
+            setLocationRequiredState();
             updateProgress();
             return;
         }
@@ -994,6 +1028,8 @@ countySelect.addEventListener(
             subcounties,
             'Select sub county/town council/division'
         );
+
+        setLocationRequiredState();
 
         updateProgress();
     }
@@ -1029,6 +1065,7 @@ subCountySelect.addEventListener(
         villageSelect.disabled = true;
 
         if (!subcounty) {
+            setLocationRequiredState();
             updateProgress();
             return;
         }
@@ -1075,6 +1112,8 @@ subCountySelect.addEventListener(
             'Select parish/ward'
         );
 
+        setLocationRequiredState();
+
         updateProgress();
     }
 );
@@ -1104,6 +1143,7 @@ parishSelect.addEventListener(
         );
 
         if (!parish) {
+            setLocationRequiredState();
             updateProgress();
             return;
         }
@@ -1151,6 +1191,8 @@ parishSelect.addEventListener(
             villages,
             'Select village/cell'
         );
+
+        setLocationRequiredState();
 
         updateProgress();
     }
@@ -1845,6 +1887,10 @@ document.getElementById('profileForm').addEventListener(
     'submit',
     function() {
 
+        // Make only applicable location fields required.
+        setLocationRequiredState();
+
+
         /*
          * The database should continue receiving the human-readable
          * district/subcounty/parish/village names, not API IDs.
@@ -2314,6 +2360,9 @@ form.querySelectorAll('input, select').forEach(input => {
 
 
 
+
+// Set location validation correctly before the form is used.
+setLocationRequiredState();
 
 // Load user data when page loads
 loadUserData();
