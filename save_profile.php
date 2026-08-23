@@ -2,6 +2,61 @@
 
 session_start();
 
+
+/*
+|--------------------------------------------------------------------------
+| CANCEL / LOGOUT
+|--------------------------------------------------------------------------
+|
+| The Cancel button can submit:
+|
+| action=cancel
+|
+| This completely destroys the current session and sends
+| the user back to the login page.
+|
+*/
+
+if (
+    isset($_POST['action']) &&
+    $_POST['action'] === 'cancel'
+) {
+
+    // Clear all session variables
+    $_SESSION = [];
+
+
+    // Remove session cookie
+    if (ini_get("session.use_cookies")) {
+
+        $params =
+            session_get_cookie_params();
+
+        setcookie(
+            session_name(),
+            '',
+            time() - 42000,
+            $params["path"],
+            $params["domain"],
+            $params["secure"],
+            $params["httponly"]
+        );
+    }
+
+
+    // Completely destroy session
+    session_destroy();
+
+
+    // Always return to login
+    header(
+        "Location: screen2.html"
+    );
+
+    exit();
+}
+
+
 /*
 |--------------------------------------------------------------------------
 | SECURITY: USER MUST BE LOGGED IN
@@ -9,7 +64,11 @@ session_start();
 */
 
 if (!isset($_SESSION['user_id'])) {
-    header("Location: screen2.html");
+
+    header(
+        "Location: screen2.html"
+    );
+
     exit();
 }
 
@@ -20,13 +79,22 @@ if (!isset($_SESSION['user_id'])) {
 |--------------------------------------------------------------------------
 */
 
-require_once __DIR__ . '/db_connect.php';
+require_once __DIR__ .
+    '/db_connect.php';
+
 
 if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+
+    die(
+        "Connection failed: " .
+        $conn->connect_error
+    );
 }
 
-$conn->set_charset("utf8mb4");
+
+$conn->set_charset(
+    "utf8mb4"
+);
 
 
 /*
@@ -34,13 +102,12 @@ $conn->set_charset("utf8mb4");
 | AUTHENTICATED USER ID
 |--------------------------------------------------------------------------
 |
-| IMPORTANT:
-| Everything below uses this user_id.
-| No profile is loaded or saved using another person's ID.
+| Everything below belongs to the currently logged-in user.
 |
 */
 
-$user_id = (int)$_SESSION['user_id'];
+$user_id =
+    (int)$_SESSION['user_id'];
 
 
 /*
@@ -49,45 +116,59 @@ $user_id = (int)$_SESSION['user_id'];
 |--------------------------------------------------------------------------
 */
 
-/* Personal details - users table */
 
-$firstname = trim(
-    $_POST['firstname'] ?? ''
-);
+/* Personal information */
 
-$lastname = trim(
-    $_POST['lastname'] ?? ''
-);
+$firstname =
+    trim(
+        $_POST['firstname'] ?? ''
+    );
 
-$email = trim(
-    $_POST['email'] ?? ''
-);
+
+$lastname =
+    trim(
+        $_POST['lastname'] ?? ''
+    );
+
+
+$email =
+    trim(
+        $_POST['email'] ?? ''
+    );
 
 
 /* Phone */
 
 $kin_country_code =
-    $_POST['kin_country_code'] ?? '+256';
+    $_POST['kin_country_code']
+    ?? '+256';
+
 
 $phone_number =
-    trim($_POST['phone'] ?? '');
+    trim(
+        $_POST['phone'] ?? ''
+    );
 
 
 /*
 |--------------------------------------------------------------------------
-| NORMALIZE PHONE NUMBER
+| NORMALIZE PHONE
 |--------------------------------------------------------------------------
 */
 
-$phone_digits = preg_replace(
-    '/\D/',
-    '',
-    $phone_number
-);
+$phone_digits =
+    preg_replace(
+        '/\D/',
+        '',
+        $phone_number
+    );
+
 
 if ($phone_digits === null) {
+
     $phone_digits = '';
 }
+
 
 if (
     str_starts_with(
@@ -97,7 +178,8 @@ if (
 ) {
 
     $full_phone =
-        '+' . $phone_digits;
+        '+' .
+        $phone_digits;
 
 } elseif (
     str_starts_with(
@@ -121,42 +203,76 @@ if (
 }
 
 
-/* Profile information */
+/*
+|--------------------------------------------------------------------------
+| PROFILE INFORMATION
+|--------------------------------------------------------------------------
+*/
 
 $age =
     !empty($_POST['age'])
         ? intval($_POST['age'])
         : null;
 
+
 $nationality =
-    trim($_POST['nationality'] ?? '');
+    trim(
+        $_POST['nationality'] ?? ''
+    );
+
 
 $district =
-    trim($_POST['district'] ?? '');
+    trim(
+        $_POST['district'] ?? ''
+    );
+
 
 $sub_county =
-    trim($_POST['sub_county'] ?? '');
+    trim(
+        $_POST['sub_county'] ?? ''
+    );
+
 
 $parish =
-    trim($_POST['parish'] ?? '');
+    trim(
+        $_POST['parish'] ?? ''
+    );
+
 
 $village =
-    trim($_POST['village'] ?? '');
+    trim(
+        $_POST['village'] ?? ''
+    );
+
 
 $nearest_health =
-    trim($_POST['nearest_health'] ?? '');
+    trim(
+        $_POST['nearest_health'] ?? ''
+    );
 
 
-/* Next of kin */
+/*
+|--------------------------------------------------------------------------
+| NEXT OF KIN
+|--------------------------------------------------------------------------
+*/
 
 $kin_name =
-    trim($_POST['kin_name'] ?? '');
+    trim(
+        $_POST['kin_name'] ?? ''
+    );
+
 
 $kin_relationship =
-    trim($_POST['kin_relationship'] ?? '');
+    trim(
+        $_POST['kin_relationship'] ?? ''
+    );
+
 
 $kin_contact =
-    trim($_POST['kin_contact'] ?? '');
+    trim(
+        $_POST['kin_contact'] ?? ''
+    );
 
 
 $full_kin_contact =
@@ -164,12 +280,17 @@ $full_kin_contact =
     $kin_contact;
 
 
-/* Pregnancy dates */
+/*
+|--------------------------------------------------------------------------
+| PREGNANCY DATES
+|--------------------------------------------------------------------------
+*/
 
 $last_period =
     !empty($_POST['last_period'])
         ? $_POST['last_period']
         : null;
+
 
 $expected_delivery =
     !empty($_POST['expected_delivery'])
@@ -186,22 +307,38 @@ $expected_delivery =
 $errors = [];
 
 
-/* Required personal details */
+/*
+|--------------------------------------------------------------------------
+| REQUIRED FIELDS
+|--------------------------------------------------------------------------
+*/
 
 if ($firstname === '') {
-    $errors[] = "First name is required.";
+
+    $errors[] =
+        "First name is required.";
 }
+
 
 if ($lastname === '') {
-    $errors[] = "Last name is required.";
+
+    $errors[] =
+        "Last name is required.";
 }
+
 
 if ($phone_number === '') {
-    $errors[] = "Phone number is required.";
+
+    $errors[] =
+        "Phone number is required.";
 }
 
 
-/* Optional email */
+/*
+|--------------------------------------------------------------------------
+| OPTIONAL EMAIL
+|--------------------------------------------------------------------------
+*/
 
 if (
     $email !== '' &&
@@ -216,7 +353,11 @@ if (
 }
 
 
-/* Age */
+/*
+|--------------------------------------------------------------------------
+| AGE
+|--------------------------------------------------------------------------
+*/
 
 if (
     $age !== null &&
@@ -228,7 +369,11 @@ if (
 }
 
 
-/* Last menstrual period */
+/*
+|--------------------------------------------------------------------------
+| LAST MENSTRUAL PERIOD
+|--------------------------------------------------------------------------
+*/
 
 if (
     $last_period !== null &&
@@ -240,7 +385,11 @@ if (
 }
 
 
-/* Expected delivery */
+/*
+|--------------------------------------------------------------------------
+| EXPECTED DELIVERY DATE
+|--------------------------------------------------------------------------
+*/
 
 if (
     $expected_delivery !== null &&
@@ -266,6 +415,7 @@ if (
     $last_period_time =
         strtotime($last_period);
 
+
     $expected_delivery_time =
         strtotime($expected_delivery);
 
@@ -283,7 +433,7 @@ if (
 
 /*
 |--------------------------------------------------------------------------
-| IF VALIDATION FAILS
+| VALIDATION ERROR
 |--------------------------------------------------------------------------
 |
 | Return to profile page.
@@ -295,8 +445,10 @@ if (!empty($errors)) {
     $_SESSION['profile_errors'] =
         $errors;
 
+
     $_SESSION['form_data'] =
         $_POST;
+
 
     header(
         "Location: screen4.php"
@@ -308,7 +460,7 @@ if (!empty($errors)) {
 
 /*
 |--------------------------------------------------------------------------
-| START DATABASE TRANSACTION
+| START TRANSACTION
 |--------------------------------------------------------------------------
 */
 
@@ -322,11 +474,6 @@ try {
     |--------------------------------------------------------------------------
     | 1. UPDATE USERS TABLE
     |--------------------------------------------------------------------------
-    |
-    | IMPORTANT:
-    | WHERE id = $user_id ensures that we update ONLY
-    | the currently logged-in person's account.
-    |
     */
 
     $update_user =
@@ -371,12 +518,8 @@ try {
 
     /*
     |--------------------------------------------------------------------------
-    | 2. CHECK WHETHER THIS USER HAS A PROFILE
+    | 2. CHECK USER PROFILE
     |--------------------------------------------------------------------------
-    |
-    | IMPORTANT:
-    | We check using the logged-in user's ID only.
-    |
     */
 
     $check =
@@ -592,13 +735,8 @@ try {
 
     /*
     |--------------------------------------------------------------------------
-    | 6. SUCCESS
+    | 6. SUCCESS → DASHBOARD
     |--------------------------------------------------------------------------
-    |
-    | IMPORTANT:
-    | After successful saving, the user goes directly
-    | to the dashboard.
-    |
     */
 
     $_SESSION['profile_success'] =
@@ -638,7 +776,7 @@ try {
 
     /*
     |--------------------------------------------------------------------------
-    | RETURN USER TO PROFILE
+    | RETURN TO PROFILE
     |--------------------------------------------------------------------------
     */
 
