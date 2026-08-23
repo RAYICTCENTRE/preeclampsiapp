@@ -50,7 +50,7 @@ if (
 
     // Always return to login
     header(
-        "Location: screen4.php"
+        "Location: screen2.html"
     );
 
     exit();
@@ -66,7 +66,7 @@ if (
 if (!isset($_SESSION['user_id'])) {
 
     header(
-        "Location: screen4.php"
+        "Location: screen2.html"
     );
 
     exit();
@@ -451,7 +451,7 @@ if (!empty($errors)) {
 
 
     header(
-        "Location: screen4.php"
+        "Location: screen2.html"
     );
 
     exit();
@@ -731,7 +731,7 @@ $conn->commit();
 
 
     header(
-        "Location: screen4.php"
+        "Location: screen2.html"
     );
 
     exit();
