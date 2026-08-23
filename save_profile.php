@@ -50,7 +50,7 @@ if (
 
     // Always return to login
     header(
-        "Location: screen2.html"
+        "Location: screen4.html"
     );
 
     exit();
@@ -66,7 +66,7 @@ if (
 if (!isset($_SESSION['user_id'])) {
 
     header(
-        "Location: screen2.html"
+        "Location: screen4.html"
     );
 
     exit();
@@ -108,6 +108,15 @@ $conn->set_charset(
 
 $user_id =
     (int)$_SESSION['user_id'];
+
+if ($user_id <= 0) {
+    $_SESSION['profile_errors'] = [
+        "Invalid logged-in user."
+    ];
+
+    header("Location: screen2.html");
+    exit();
+}
 
 
 /*
@@ -451,7 +460,7 @@ if (!empty($errors)) {
 
 
     header(
-        "Location: screen2.html"
+        "Location: screen4.html"
     );
 
     exit();
@@ -556,6 +565,7 @@ try {
         $stmt = $conn->prepare(
             "UPDATE user_profiles
              SET
+                 phone = ?,
                  age = ?,
                  nationality = ?,
                  district = ?,
@@ -580,7 +590,8 @@ try {
         }
 
         $stmt->bind_param(
-            "issssssssssssi",
+            "sissssssssssssi",
+            $full_phone,
             $age,
             $nationality,
             $district,
@@ -615,6 +626,7 @@ try {
             "INSERT INTO user_profiles
             (
                 user_id,
+                phone,
                 age,
                 nationality,
                 district,
@@ -629,7 +641,7 @@ try {
                 last_period,
                 expected_delivery
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
 
         if (!$stmt) {
@@ -640,8 +652,9 @@ try {
         }
 
         $stmt->bind_param(
-            "iissssssssssss",
+            "isssssssssssssss",
             $user_id,
+            $full_phone,
             $age,
             $nationality,
             $district,
@@ -731,7 +744,7 @@ $conn->commit();
 
 
     header(
-        "Location: screen2.html"
+        "Location: screen4.html"
     );
 
     exit();
