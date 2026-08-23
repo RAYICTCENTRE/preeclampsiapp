@@ -1,159 +1,345 @@
 <?php
-// profile.php - Complete working solution with PHP backend
+// screen4.php - MotherCare Profile
+// Uses the existing mysqli connection from db_connect.php.
 
 session_start();
 
-// Database configuration
+// ------------------------------------------------------------
+// DATABASE CONNECTION
+// ------------------------------------------------------------
 require_once __DIR__ . '/db_connect.php';
 
-// Assume user is logged in, get user_id from session
-$user_id = $_SESSION['user_id'] ?? 1; // Default to 1 for testing
-
-try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
-    // Fetch user data
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
-    $stmt->execute([$user_id]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    // Fetch profile data
-    $stmt = $pdo->prepare("SELECT * FROM user_profiles WHERE user_id = ?");
-    $stmt->execute([$user_id]);
-    $profile = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    // If no profile exists, create default empty profile
-    if (!$profile) {
-        $profile = [
-            'age' => '',
-            'nationality' => '',
-            'district' => '',
-            'sub_county' => '',
-            'parish' => '',
-            'village' => '',
-            'nearest_health' => '',
-            'kin_name' => '',
-            'kin_relationship' => '',
-            'kin_contact' => '',
-            'last_period' => '',
-            'expected_delivery' => ''
-        ];
-    }
-    
-} catch (PDOException $e) {
-    // For demo purposes, use sample data if database doesn't exist
-    $user = [
-        'firstname' => 'MONICA',
-        'lastname' => 'NABIRYE',
-        'email' => 'monioka24@gmail.com',
-        'phone' => '+256786628308'
-    ];
-    $profile = [
-        'age' => '33',
-        'nationality' => 'UGANDAN',
-        'district' => 'LIRA CITY',
-        'sub_county' => 'LIRA CITY WEST',
-        'parish' => 'OMITO WARD',
-        'village' => 'AKITENINO',
-        'nearest_health' => 'ADYEL HEALTH CENTER III',
-        'kin_name' => 'okao moses mathew',
-        'kin_relationship' => 'HUSBAND',
-        'kin_contact' => '+256700000000',
-        'last_period' => '2026-02-23',
-        'expected_delivery' => '2026-11-30'
-    ];
+if (!isset($conn) || !($conn instanceof mysqli)) {
+    die('Database connection is not available.');
 }
 
-// Handle form submission
+if ($conn->connect_error) {
+    die('Database connection failed.');
+}
+
+// ------------------------------------------------------------
+// GET LOGGED-IN USER
+// ------------------------------------------------------------
+$user_id = $_SESSION['user_id'] ?? null;
+
+if (!$user_id) {
+    // Do not use a fake/default user. A profile must belong to
+    // the currently authenticated MotherCare user.
+    header('Location: screen2.html');
+    exit;
+}
+
+$user_id = (int) $user_id;
+
+// ------------------------------------------------------------
+// DEFAULT PROFILE VALUES
+// ------------------------------------------------------------
+$profile = [
+    'phone' => '',
+    'nationality' => '',
+    'district' => '',
+    'sub_county' => '',
+    'parish' => '',
+    'village' => '',
+    'nearest_health' => '',
+    'kin_name' => '',
+    'kin_relationship' => '',
+    'kin_contact' => '',
+    'kin_country_code' => '+256',
+    'age' => '',
+    'last_period' => '',
+    'expected_delivery' => ''
+];
+
+$user = [
+    'firstname' => '',
+    'lastname' => '',
+    'email' => '',
+    'phone' => ''
+];
+
+$error_message = null;
+
+// ------------------------------------------------------------
+// FETCH USER
+// ------------------------------------------------------------
+$stmt = $conn->prepare("SELECT id, firstname, lastname, email, phone FROM users WHERE id = ? LIMIT 1");
+
+if (!$stmt) {
+    die('Unable to prepare user query.');
+}
+
+$stmt->bind_param('i', $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$db_user = $result ? $result->fetch_assoc() : null;
+$stmt->close();
+
+if (!$db_user) {
+    session_unset();
+    session_destroy();
+    header('Location: screen2.html');
+    exit;
+}
+
+$user = array_merge($user, $db_user);
+
+// ------------------------------------------------------------
+// FETCH PROFILE
+// ------------------------------------------------------------
+$stmt = $conn->prepare("SELECT phone, nationality, district, sub_county, parish, village,
+        nearest_health, kin_name, kin_relationship, kin_contact, kin_country_code,
+        age, last_period, expected_delivery
+        FROM user_profiles WHERE user_id = ? LIMIT 1");
+
+if (!$stmt) {
+    die('Unable to prepare profile query.');
+}
+
+$stmt->bind_param('i', $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$db_profile = $result ? $result->fetch_assoc() : null;
+$stmt->close();
+
+if ($db_profile) {
+    $profile = array_merge($profile, $db_profile);
+}
+
+// ------------------------------------------------------------
+// HANDLE PROFILE SAVE
+// ------------------------------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     try {
-        // Extract phone components
-        $phone_country_code = $_POST['phoneCountryCode'] ?? '+256';
-        $phone_number = $_POST['phone'] ?? '';
+        $phone_country_code = trim($_POST['phoneCountryCode'] ?? '+256');
+        $phone_number = trim($_POST['phone'] ?? '');
         $full_phone = $phone_country_code . $phone_number;
-        
-        // Update or insert profile
-        $stmt = $pdo->prepare("INSERT INTO user_profiles 
-            (user_id, age, nationality, district, sub_county, parish, village, 
-             nearest_health, kin_name, kin_relationship, kin_contact, 
-             last_period, expected_delivery) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-            age = VALUES(age),
-            nationality = VALUES(nationality),
-            district = VALUES(district),
-            sub_county = VALUES(sub_county),
-            parish = VALUES(parish),
-            village = VALUES(village),
-            nearest_health = VALUES(nearest_health),
-            kin_name = VALUES(kin_name),
-            kin_relationship = VALUES(kin_relationship),
-            kin_contact = VALUES(kin_contact),
-            last_period = VALUES(last_period),
-            expected_delivery = VALUES(expected_delivery)");
-            
-        $stmt->execute([
-            $user_id,
-            $_POST['age'],
-            $_POST['nationality'],
-            $_POST['district'],
-            $_POST['sub_county'],
-            $_POST['parish'],
-            $_POST['village'],
-            $_POST['nearest_health'],
-            $_POST['kin_name'],
-            $_POST['kin_relationship'],
-            $_POST['kin_contact'],
-            $_POST['last_period'],
-            $_POST['expected_delivery']
-        ]);
-        
-        // Redirect to dashboard after successful update
-        header('Location: dashboard.php?success=1');
+
+        $kin_country_code = trim($_POST['kinCountryCode'] ?? '+256');
+        $kin_number = trim($_POST['kin_contact'] ?? '');
+        $full_kin_phone = $kin_country_code . $kin_number;
+
+        $age_raw = trim($_POST['age'] ?? '');
+        $age = ($age_raw === '') ? null : (int) $age_raw;
+
+        $nationality = trim($_POST['nationality'] ?? '');
+        $district = trim($_POST['district'] ?? '');
+        $sub_county = trim($_POST['sub_county'] ?? '');
+        $parish = trim($_POST['parish'] ?? '');
+        $village = trim($_POST['village'] ?? '');
+        $nearest_health = trim($_POST['nearest_health'] ?? '');
+        $kin_name = trim($_POST['kin_name'] ?? '');
+        $kin_relationship = trim($_POST['kin_relationship'] ?? '');
+        $last_period = trim($_POST['last_period'] ?? '');
+        $expected_delivery = trim($_POST['expected_delivery'] ?? '');
+
+        // Basic validation.
+        if ($age !== null && ($age < 12 || $age > 120)) {
+            throw new Exception('Age must be between 12 and 120.');
+        }
+
+        $required = [
+            'nationality' => $nationality,
+            'district' => $district,
+            'sub_county' => $sub_county,
+            'parish' => $parish,
+            'village' => $village
+        ];
+
+        foreach ($required as $field => $value) {
+            if ($value === '') {
+                throw new Exception('Please fill in all required profile fields.');
+            }
+        }
+
+        // --------------------------------------------------------
+        // Keep the user's main phone number synchronized in users.
+        // --------------------------------------------------------
+        $stmt = $conn->prepare("UPDATE users SET phone = ? WHERE id = ?");
+        if (!$stmt) {
+            throw new Exception('Unable to prepare phone update.');
+        }
+        $stmt->bind_param('si', $full_phone, $user_id);
+        if (!$stmt->execute()) {
+            $stmt->close();
+            throw new Exception('Unable to update phone number.');
+        }
+        $stmt->close();
+
+        // --------------------------------------------------------
+        // Check whether a profile already exists.
+        // --------------------------------------------------------
+        $stmt = $conn->prepare("SELECT id FROM user_profiles WHERE user_id = ? LIMIT 1");
+        if (!$stmt) {
+            throw new Exception('Unable to check existing profile.');
+        }
+        $stmt->bind_param('i', $user_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $existing_profile = $result ? $result->fetch_assoc() : null;
+        $stmt->close();
+
+        if ($existing_profile) {
+            // ----------------------------------------------------
+            // UPDATE existing profile
+            // ----------------------------------------------------
+            $sql = "UPDATE user_profiles SET
+                        phone = ?,
+                        nationality = ?,
+                        district = ?,
+                        sub_county = ?,
+                        parish = ?,
+                        village = ?,
+                        nearest_health = ?,
+                        kin_name = ?,
+                        kin_relationship = ?,
+                        kin_contact = ?,
+                        kin_country_code = ?,
+                        age = ?,
+                        last_period = NULLIF(?, ''),
+                        expected_delivery = NULLIF(?, '')
+                    WHERE user_id = ?";
+
+            $stmt = $conn->prepare($sql);
+            if (!$stmt) {
+                throw new Exception('Unable to prepare profile update.');
+            }
+
+            $stmt->bind_param(
+                'sssssssssssissi',
+                $full_phone,
+                $nationality,
+                $district,
+                $sub_county,
+                $parish,
+                $village,
+                $nearest_health,
+                $kin_name,
+                $kin_relationship,
+                $full_kin_phone,
+                $kin_country_code,
+                $age,
+                $last_period,
+                $expected_delivery,
+                $user_id
+            );
+        } else {
+            // ----------------------------------------------------
+            // INSERT new profile
+            // ----------------------------------------------------
+            $sql = "INSERT INTO user_profiles
+                    (user_id, phone, nationality, district, sub_county, parish,
+                     village, nearest_health, kin_name, kin_relationship,
+                     kin_contact, kin_country_code, age, last_period, expected_delivery)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), NULLIF(?, ''))";
+
+            $stmt = $conn->prepare($sql);
+            if (!$stmt) {
+                throw new Exception('Unable to prepare profile insert.');
+            }
+
+            $stmt->bind_param(
+                'isssssssssssiss',
+                $user_id,
+                $full_phone,
+                $nationality,
+                $district,
+                $sub_county,
+                $parish,
+                $village,
+                $nearest_health,
+                $kin_name,
+                $kin_relationship,
+                $full_kin_phone,
+                $kin_country_code,
+                $age,
+                $last_period,
+                $expected_delivery
+            );
+        }
+
+        if (!$stmt->execute()) {
+            $db_error = $stmt->error;
+            $stmt->close();
+            throw new Exception('Unable to save profile: ' . $db_error);
+        }
+        $stmt->close();
+
+        // Redirect after successful save to prevent duplicate form submission.
+        header('Location: dashboard.html?profile_updated=1');
         exit;
-        
-    } catch (PDOException $e) {
-        $error_message = "Error saving profile: " . $e->getMessage();
+
+    } catch (Throwable $e) {
+        $error_message = 'Error saving profile: ' . $e->getMessage();
+
+        // Keep the submitted values visible if saving failed.
+        $profile['phone'] = $full_phone ?? $profile['phone'];
+        $profile['nationality'] = $nationality ?? $profile['nationality'];
+        $profile['district'] = $district ?? $profile['district'];
+        $profile['sub_county'] = $sub_county ?? $profile['sub_county'];
+        $profile['parish'] = $parish ?? $profile['parish'];
+        $profile['village'] = $village ?? $profile['village'];
+        $profile['nearest_health'] = $nearest_health ?? $profile['nearest_health'];
+        $profile['kin_name'] = $kin_name ?? $profile['kin_name'];
+        $profile['kin_relationship'] = $kin_relationship ?? $profile['kin_relationship'];
+        $profile['kin_contact'] = $full_kin_phone ?? $profile['kin_contact'];
+        $profile['kin_country_code'] = $kin_country_code ?? $profile['kin_country_code'];
+        $profile['age'] = $age ?? $profile['age'];
+        $profile['last_period'] = $last_period ?? $profile['last_period'];
+        $profile['expected_delivery'] = $expected_delivery ?? $profile['expected_delivery'];
+        $user['phone'] = $full_phone ?? $user['phone'];
     }
 }
 
-// Helper function to safely output values
+// ------------------------------------------------------------
+// HELPER FUNCTION
+// ------------------------------------------------------------
 function safe($value) {
-    return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
+    return htmlspecialchars((string)($value ?? ''), ENT_QUOTES, 'UTF-8');
 }
 
-// Extract phone components for display
+// ------------------------------------------------------------
+// EXTRACT MAIN PHONE FOR DISPLAY
+// ------------------------------------------------------------
 $phone_parts = [];
-if (!empty($user['phone'])) {
-    if (preg_match('/^(\+[0-9]+)(.*)$/', $user['phone'], $matches)) {
+$display_phone = $user['phone'] ?: ($profile['phone'] ?? '');
+
+if (!empty($display_phone)) {
+    if (preg_match('/^(\+[0-9]+)(.*)$/', $display_phone, $matches)) {
         $phone_parts['code'] = $matches[1];
         $phone_parts['number'] = $matches[2];
     } else {
         $phone_parts['code'] = '+256';
-        $phone_parts['number'] = $user['phone'];
+        $phone_parts['number'] = $display_phone;
     }
 } else {
     $phone_parts['code'] = '+256';
     $phone_parts['number'] = '';
 }
 
-// Extract kin phone
+// ------------------------------------------------------------
+// EXTRACT EMERGENCY PHONE FOR DISPLAY
+// ------------------------------------------------------------
 $kin_phone_parts = [];
-if (!empty($profile['kin_contact'])) {
-    if (preg_match('/^(\+[0-9]+)(.*)$/', $profile['kin_contact'], $matches)) {
+$kin_display_phone = $profile['kin_contact'] ?? '';
+$kin_code_from_db = $profile['kin_country_code'] ?? '+256';
+
+if (!empty($kin_display_phone)) {
+    if (preg_match('/^(\+[0-9]+)(.*)$/', $kin_display_phone, $matches)) {
         $kin_phone_parts['code'] = $matches[1];
         $kin_phone_parts['number'] = $matches[2];
     } else {
-        $kin_phone_parts['code'] = '+256';
-        $kin_phone_parts['number'] = $profile['kin_contact'];
+        $kin_phone_parts['code'] = $kin_code_from_db ?: '+256';
+        $kin_phone_parts['number'] = $kin_display_phone;
     }
 } else {
-    $kin_phone_parts['code'] = '+256';
+    $kin_phone_parts['code'] = $kin_code_from_db ?: '+256';
     $kin_phone_parts['number'] = '';
 }
 
-// Calculate profile completion percentage
+// ------------------------------------------------------------
+// CALCULATE PROFILE COMPLETION
+// ------------------------------------------------------------
 $fields = [
     $user['firstname'] ?? '',
     $user['lastname'] ?? '',
@@ -172,11 +358,11 @@ $fields = [
 $filled = 0;
 $total = count($fields);
 foreach ($fields as $field) {
-    if (!empty(trim($field))) {
+    if (trim((string)$field) !== '') {
         $filled++;
     }
 }
-$completion_percent = round(($filled / $total) * 100);
+$completion_percent = $total > 0 ? round(($filled / $total) * 100) : 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -933,7 +1119,7 @@ $completion_percent = round(($filled / $total) * 100);
 
         cancelBtn.addEventListener('click', function() {
             if (confirm('Cancel and go to dashboard? Changes will not be saved.')) {
-                window.location.href = 'dashboard.php';
+                window.location.href = 'dashboard.html';
             }
         });
 
