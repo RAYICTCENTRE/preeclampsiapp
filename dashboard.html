@@ -1,806 +1,3631 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MotherCare - Health Analytics</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-*{margin:0;padding:0;box-sizing:border-box}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+<title>MotherCare Dashboard</title>
+
+<link
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    rel="stylesheet"
+>
+
+<style>
+
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
 :root{
-  --green:#1a472a;--green2:#2e7d32;--bg:#f5f7fb;--text:#24352e;
-  --muted:#6c757d;--white:#fff;--line:#e5ebe8;--shadow:0 5px 18px rgba(0,0,0,.07);
+    --green:#176b3a;
+    --green-dark:#0f512b;
+    --green-light:#eaf7ef;
+    --blue:#2878b9;
+    --orange:#e47b45;
+    --purple:#7568c8;
+    --red:#dc3545;
+    --text:#26352e;
+    --muted:#718078;
+    --bg:#f5f8f6;
+    --white:#ffffff;
+    --border:#e1eae4;
+    --shadow:0 5px 18px rgba(0,0,0,.07);
 }
-html{scroll-behavior:smooth}
-body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-a{text-decoration:none;color:inherit}
 
-/* Header */
+html{
+    scroll-behavior:smooth;
+}
+
+body{
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Arial,
+        sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    padding-bottom:82px;
+}
+
+a{
+    text-decoration:none;
+    color:inherit;
+}
+
+
+/* =========================================================
+   TOP BAR
+========================================================= */
+
 .top-bar{
-  position:sticky;top:0;z-index:50;background:rgba(255,255,255,.97);
-  border-bottom:1px solid var(--line);padding:14px 4%;
-  display:flex;justify-content:space-between;align-items:center;gap:18px;
-  backdrop-filter:blur(10px)
-}
-.page-title h1{font-size:21px;color:var(--green);font-weight:800}
-.page-title small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
-.user-info{display:flex;align-items:center;gap:10px}
-.session-timer{background:#f8f9fa;padding:7px 12px;border-radius:20px;font-size:12px;display:flex;align-items:center;gap:7px;color:#2c3e50}
-.session-timer i{color:var(--green2)}
-.session-timer.warning{background:#fff3cd;color:#856404;animation:pulse 1s ease-in-out infinite}
-.session-timer.danger{background:#f8d7da;color:#721c24;animation:pulse .5s ease-in-out infinite}
-.welcome-badge{background:var(--green2);color:white;padding:7px 13px;border-radius:20px;font-size:12px}
-.btn-logout{background:#dc3545;color:white;padding:8px 14px;border-radius:9px;font-size:12px;font-weight:600}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
-
-/* Main */
-.main-content{width:min(1180px,92%);margin:0 auto;padding:30px 0 60px}
-
-/* Sync */
-.sync-card{
-  background:#fff;border:1px solid #dcebe2;border-radius:16px;padding:14px 17px;
-  display:flex;justify-content:space-between;align-items:center;gap:14px;
-  margin-bottom:20px;box-shadow:var(--shadow)
-}
-.sync-left{display:flex;align-items:center;gap:11px}
-.sync-icon{width:42px;height:42px;border-radius:12px;background:#e6f4eb;color:var(--green2);display:grid;place-items:center}
-.sync-title{font-size:13px;font-weight:750}
-.sync-status{display:inline-flex;align-items:center;gap:5px;margin-left:7px;color:var(--green2);font-size:10px;font-weight:700}
-.status-dot{width:7px;height:7px;background:#32a566;border-radius:50%}
-.sync-status.offline{color:#b46c19}.sync-status.offline .status-dot{background:#e09a31}
-.sync-card p{font-size:11px;color:var(--muted);margin-top:3px}
-.sync-button{border:0;background:var(--green2);color:#fff;padding:10px 14px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
-.sync-button:hover{background:var(--green)}
-.sync-button:disabled{opacity:.55;cursor:not-allowed}
-
-/* Four main boxes */
-.feature-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:22px}
-.feature-card{
-  min-height:145px;border-radius:17px;color:#fff;padding:18px;
-  display:flex;flex-direction:column;box-shadow:var(--shadow);
-  transition:transform .2s,box-shadow .2s
-}
-.feature-card:hover{transform:translateY(-3px);box-shadow:0 10px 25px rgba(0,0,0,.12)}
-.feature-card.analytics{background:#2e7d32}
-.feature-card.symptoms{background:#3f82bd}
-.feature-card.doctor{background:#d97850}
-.feature-card.profile{background:#7469c6}
-.feature-icon{font-size:21px;margin-bottom:auto}
-.feature-title{font-size:16px;font-weight:800;white-space:nowrap}
-.feature-footer{
-  border-top:1px solid rgba(255,255,255,.3);margin-top:11px;padding-top:9px;
-  display:flex;align-items:center;justify-content:space-between;font-size:10px;font-weight:650
+    position:sticky;
+    top:0;
+    z-index:100;
+    background:rgba(255,255,255,.97);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--border);
+    padding:12px 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
 }
 
-/* Compact overview */
-.quick-overview{
-  background:#fff;border:1px solid var(--line);border-radius:16px;padding:17px;
-  box-shadow:var(--shadow);margin-bottom:28px
+.brand{
+    display:flex;
+    align-items:center;
+    gap:9px;
 }
-.overview-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:13px}
-.overview-heading h2{font-size:16px;color:var(--green)}
-.overview-heading a{font-size:11px;color:var(--green2);font-weight:700}
-.overview-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.overview-item{background:#f7f9f8;border-radius:11px;padding:11px}
-.overview-item span{display:block;color:var(--muted);font-size:10px;margin-bottom:5px}
-.overview-item strong{font-size:14px}
 
-/* Analytics */
-.analytics-section{scroll-margin-top:85px}
-.analytics-header{display:flex;justify-content:space-between;align-items:end;margin-bottom:15px}
-.analytics-header h2{font-size:19px;color:var(--green)}
-.analytics-header p{font-size:11px;color:var(--muted);margin-top:4px}
-.back-link{font-size:11px;color:var(--green2);font-weight:700}
-.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-bottom:20px}
-.stat-card{background:#fff;padding:18px;border-radius:15px;box-shadow:var(--shadow);border-left:4px solid var(--green2)}
-.stat-icon{font-size:27px;margin-bottom:8px}.stat-number{font-size:25px;font-weight:800;color:var(--green)}
-.stat-label{color:var(--muted);font-size:11px;margin-top:4px}
-.section{background:#fff;border-radius:15px;padding:19px;margin-bottom:20px;box-shadow:var(--shadow)}
-.section h3{margin-bottom:14px;color:var(--green);font-size:16px;border-left:4px solid var(--green2);padding-left:10px}
-.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:17px}
-.section-header h3{margin-bottom:0}
-.btn-view-all{color:var(--green2);font-size:11px;font-weight:700}
-.table-wrapper{overflow-x:auto}
-table{width:100%;border-collapse:collapse;min-width:650px}
-th,td{padding:11px;border-bottom:1px solid #ecf0f1;text-align:left;font-size:11px}
-th{background:#f8f9fa;font-weight:600;color:#2c3e50}
-tr:hover{background:#f8f9fa}
-.badge{padding:4px 9px;border-radius:20px;font-size:10px;font-weight:600}
-.badge-low{background:#d4edda;color:#155724}.badge-moderate{background:#fff3cd;color:#856404}.badge-high{background:#f8d7da;color:#721c24}.badge-critical{background:#f8d7da;color:#dc3545}
-.risk-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
-.risk-dot.low{background:#28a745}.risk-dot.moderate{background:#ffc107}.risk-dot.high{background:#fd7e14}.risk-dot.critical{background:#dc3545}
-.chart-container{display:grid;grid-template-columns:1fr 1fr;gap:17px;margin-top:18px}
-.chart-box{background:#f8f9fa;border-radius:12px;padding:18px;text-align:center;min-height:200px;display:flex;flex-direction:column;justify-content:center;align-items:center}
-.chart-box h4{color:#2c3e50;margin-bottom:10px;font-size:13px}
-.chart-bar{display:flex;align-items:flex-end;justify-content:center;gap:20px;height:150px;padding-top:20px;width:100%}
-.bar-item{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1}.bar{width:40px;border-radius:4px 4px 0 0;transition:height .5s;min-height:20px}.bar-label{font-size:11px;color:var(--muted)}.bar-value{font-size:11px;font-weight:600}
-.risk-level-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #ecf0f1;width:100%;font-size:11px}.risk-level-item:last-child{border-bottom:0}
-.quick-insights{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:15px}
-.insight-card{background:#f8f9fa;padding:14px;border-radius:10px;text-align:center}
-.insight-card .number{font-size:22px;font-weight:bold;color:var(--green2)}.insight-card .label{color:var(--muted);font-size:11px}
-
-/* Bottom navigation */
-.bottom-nav{display:flex;justify-content:center;gap:65px;position:fixed;bottom:0;left:0;right:0;height:64px;background:rgba(255,255,255,.97);border-top:1px solid var(--line);z-index:60;backdrop-filter:blur(10px)}
-.bottom-nav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#7c8984;font-size:10px;font-weight:650}
-.bottom-nav a i{font-size:16px}.bottom-nav a.active{color:var(--green2)}
-
-/* Modal retained */
-.idle-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;justify-content:center;align-items:center;animation:fadeIn .3s ease}
-.idle-modal.show{display:flex}@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-.idle-modal-content{background:white;padding:40px;border-radius:20px;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);animation:slideUp .3s ease}
-.idle-modal-content i{font-size:48px;color:#ff8c42;margin-bottom:16px}.idle-modal-content h2{color:#2c3e50;margin-bottom:10px}.idle-modal-content p{color:#6c757d;margin-bottom:20px;font-size:14px}
-.countdown-timer{font-size:48px;font-weight:bold;color:#ff8c42;margin:10px 0}
-.btn-stay,.btn-logout-modal{color:#fff;padding:10px 22px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin:4px}
-.btn-stay{background:var(--green2)}.btn-logout-modal{background:#dc3545}
-
-/* Responsive */
-@media(max-width:900px){
-  .feature-grid{grid-template-columns:repeat(2,1fr)}
-  .stats-grid{grid-template-columns:repeat(2,1fr)}
-  .quick-insights{grid-template-columns:repeat(2,1fr)}
+.brand-icon{
+    width:38px;
+    height:38px;
+    border-radius:11px;
+    background:var(--green);
+    color:white;
+    display:grid;
+    place-items:center;
+    font-size:18px;
 }
-@media(max-width:650px){
-  .top-bar{padding:11px 4%;align-items:center}
-  .page-title h1{font-size:17px}.page-title small{font-size:9px}
-  .user-info{gap:6px}.welcome-badge{padding:6px 9px;font-size:10px}.btn-logout{padding:7px 9px;font-size:10px}
-  .session-timer{font-size:10px;padding:6px 9px}
-  .main-content{width:92%;padding:20px 0 50px}
-  .sync-card{align-items:flex-start;flex-direction:column}.sync-button{width:100%}
-  .feature-grid{gap:10px}
-  .feature-card{min-height:125px;padding:14px;border-radius:14px}.feature-title{font-size:14px}.feature-footer{font-size:9px}
-  .overview-grid{grid-template-columns:1fr}.chart-container{grid-template-columns:1fr}
-  .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px}.stat-card{padding:14px}.stat-number{font-size:20px}
-  .quick-insights{grid-template-columns:repeat(2,1fr)}
-  .analytics-header{align-items:flex-start;flex-direction:column;gap:8px}
-  .bottom-nav{justify-content:space-around;gap:0}
+
+.brand-text h1{
+    font-size:17px;
+    color:var(--green-dark);
+    font-weight:800;
 }
-@media(orientation:landscape) and (max-height:600px){
-  .feature-grid{grid-template-columns:repeat(4,1fr)}
-  .feature-card{min-height:115px}
-  .main-content{padding-top:15px}
+
+.brand-text small{
+    display:block;
+    color:var(--muted);
+    font-size:9px;
+    margin-top:1px;
+}
+
+.user-area{
+    display:flex;
+    align-items:center;
+    gap:7px;
+}
+
+.welcome{
+    background:var(--green-light);
+    color:var(--green-dark);
+    border-radius:20px;
+    padding:7px 10px;
+    font-size:10px;
+    font-weight:700;
+    max-width:105px;
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+}
+
+.logout-btn{
+    width:34px;
+    height:34px;
+    border:0;
+    border-radius:10px;
+    background:#fff0f1;
+    color:var(--red);
+    display:grid;
+    place-items:center;
+    cursor:pointer;
+}
+
+
+/* =========================================================
+   MAIN
+========================================================= */
+
+.container{
+    width:min(900px,94%);
+    margin:auto;
+    padding:18px 0 25px;
+}
+
+
+/* =========================================================
+   WELCOME
+========================================================= */
+
+.welcome-section{
+    margin-bottom:15px;
+}
+
+.welcome-section h2{
+    font-size:21px;
+    color:var(--green-dark);
+    font-weight:800;
+}
+
+.welcome-section p{
+    color:var(--muted);
+    font-size:12px;
+    margin-top:4px;
+}
+
+
+/* =========================================================
+   PREGNANCY SUMMARY
+========================================================= */
+
+.pregnancy-card{
+    background:linear-gradient(
+        135deg,
+        #176b3a,
+        #23804a
+    );
+    color:white;
+    border-radius:20px;
+    padding:19px 15px;
+    box-shadow:0 8px 25px rgba(23,107,58,.18);
+    margin-bottom:17px;
+}
+
+.pregnancy-heading{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    margin-bottom:15px;
+}
+
+.pregnancy-heading-icon{
+    width:34px;
+    height:34px;
+    border-radius:10px;
+    background:rgba(255,255,255,.16);
+    display:grid;
+    place-items:center;
+}
+
+.pregnancy-heading h3{
+    font-size:14px;
+    font-weight:800;
+}
+
+.pregnancy-heading small{
+    display:block;
+    opacity:.8;
+    font-size:9px;
+    margin-top:2px;
+}
+
+.pregnancy-stats{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+}
+
+.pregnancy-stat{
+    background:rgba(255,255,255,.13);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:14px;
+    padding:13px 7px;
+    text-align:center;
+}
+
+.pregnancy-stat i{
+    font-size:15px;
+    opacity:.9;
+    margin-bottom:6px;
+}
+
+.pregnancy-stat .label{
+    display:block;
+    font-size:8px;
+    opacity:.78;
+    margin-bottom:5px;
+}
+
+.pregnancy-stat strong{
+    display:block;
+    font-size:14px;
+    font-weight:800;
+    line-height:1.2;
+}
+
+.risk-low{
+    color:#d9ffe5;
+}
+
+.risk-moderate{
+    color:#ffe9a6;
+}
+
+.risk-high{
+    color:#ffd0a9;
+}
+
+.risk-critical{
+    color:#ffb6b6;
+}
+
+
+/* =========================================================
+   FIVE MAIN BUTTONS
+========================================================= */
+
+.section-heading{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin:17px 0 10px;
+}
+
+.section-heading h3{
+    color:var(--green-dark);
+    font-size:15px;
+    font-weight:800;
+}
+
+.section-heading span{
+    color:var(--muted);
+    font-size:9px;
+}
+
+.action-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:11px;
+}
+
+.action-card{
+    min-height:120px;
+    border-radius:17px;
+    padding:16px;
+    color:white;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    box-shadow:var(--shadow);
+    transition:.2s ease;
+    position:relative;
+    overflow:hidden;
+}
+
+.action-card:active{
+    transform:scale(.98);
+}
+
+.action-card.full{
+    grid-column:1 / -1;
+    min-height:95px;
+}
+
+.action-icon{
+    width:38px;
+    height:38px;
+    border-radius:11px;
+    background:rgba(255,255,255,.18);
+    display:grid;
+    place-items:center;
+    font-size:17px;
+}
+
+.action-card h4{
+    font-size:14px;
+    font-weight:800;
+    margin-top:9px;
+}
+
+.action-card p{
+    font-size:9px;
+    opacity:.86;
+    margin-top:3px;
+}
+
+.action-arrow{
+    position:absolute;
+    right:14px;
+    bottom:15px;
+    width:27px;
+    height:27px;
+    border-radius:50%;
+    background:rgba(255,255,255,.17);
+    display:grid;
+    place-items:center;
+    font-size:10px;
+}
+
+.symptoms{
+    background:linear-gradient(135deg,#2878b9,#3e8dcc);
+}
+
+.doctor{
+    background:linear-gradient(135deg,#d66e3e,#e58a5c);
+}
+
+.details{
+    background:linear-gradient(135deg,#176b3a,#23804a);
+}
+
+.profile{
+    background:linear-gradient(135deg,#6c60bd,#8175d4);
+}
+
+.sync{
+    background:linear-gradient(135deg,#536575,#697c8e);
+}
+
+
+/* =========================================================
+   SYNC STATUS
+========================================================= */
+
+.sync-mini{
+    margin-top:12px;
+    background:white;
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:11px 13px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    box-shadow:var(--shadow);
+}
+
+.sync-info{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    min-width:0;
+}
+
+.sync-icon{
+    width:34px;
+    height:34px;
+    flex:none;
+    border-radius:10px;
+    background:var(--green-light);
+    color:var(--green);
+    display:grid;
+    place-items:center;
+}
+
+.sync-text{
+    min-width:0;
+}
+
+.sync-title{
+    font-size:10px;
+    font-weight:800;
+}
+
+.sync-status{
+    display:flex;
+    align-items:center;
+    gap:5px;
+    color:var(--green);
+    font-size:8px;
+    margin-top:2px;
+}
+
+.sync-status.offline{
+    color:#a56816;
+}
+
+.status-dot{
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    background:#28a745;
+}
+
+.sync-status.offline .status-dot{
+    background:#e09a31;
+}
+
+.sync-button{
+    border:0;
+    background:var(--green);
+    color:white;
+    padding:8px 11px;
+    border-radius:9px;
+    font-size:9px;
+    font-weight:700;
+    cursor:pointer;
+    white-space:nowrap;
+}
+
+.sync-button:disabled{
+    opacity:.5;
+}
+
+
+/* =========================================================
+   HEALTH DETAILS
+========================================================= */
+
+.health-details{
+    display:none;
+    margin-top:20px;
+}
+
+.health-details.open{
+    display:block;
+    animation:slideDown .25s ease;
+}
+
+@keyframes slideDown{
+    from{
+        opacity:0;
+        transform:translateY(-8px);
+    }
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+
+.details-header{
+    background:white;
+    border-radius:16px;
+    border:1px solid var(--border);
+    padding:15px;
+    margin-bottom:11px;
+    box-shadow:var(--shadow);
+}
+
+.details-header-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+}
+
+.details-header h3{
+    color:var(--green-dark);
+    font-size:16px;
+}
+
+.close-details{
+    border:0;
+    background:#f1f5f3;
+    width:32px;
+    height:32px;
+    border-radius:9px;
+    color:var(--muted);
+    cursor:pointer;
+}
+
+.details-header p{
+    color:var(--muted);
+    font-size:10px;
+    margin-top:4px;
+}
+
+
+/* =========================================================
+   DETAIL STAT CARDS
+========================================================= */
+
+.detail-stats{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:10px;
+    margin-bottom:11px;
+}
+
+.detail-stat{
+    background:white;
+    border-radius:14px;
+    padding:14px;
+    border:1px solid var(--border);
+    box-shadow:var(--shadow);
+}
+
+.detail-stat-icon{
+    font-size:17px;
+    color:var(--green);
+}
+
+.detail-stat-number{
+    font-size:20px;
+    font-weight:800;
+    color:var(--green-dark);
+    margin-top:7px;
+}
+
+.detail-stat-label{
+    font-size:9px;
+    color:var(--muted);
+    margin-top:2px;
+}
+
+
+/* =========================================================
+   RISK DISTRIBUTION
+========================================================= */
+
+.detail-box{
+    background:white;
+    border-radius:15px;
+    border:1px solid var(--border);
+    box-shadow:var(--shadow);
+    padding:15px;
+    margin-bottom:11px;
+}
+
+.detail-box h4{
+    color:var(--green-dark);
+    font-size:13px;
+    margin-bottom:13px;
+}
+
+.risk-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:10px;
+}
+
+.risk-row:last-child{
+    margin-bottom:0;
+}
+
+.risk-name{
+    width:70px;
+    font-size:9px;
+    color:var(--muted);
+}
+
+.risk-track{
+    flex:1;
+    height:8px;
+    border-radius:10px;
+    background:#edf1ef;
+    overflow:hidden;
+}
+
+.risk-fill{
+    height:100%;
+    width:0;
+    border-radius:10px;
+    transition:width .5s ease;
+}
+
+.low-fill{
+    background:#28a745;
+}
+
+.moderate-fill{
+    background:#ffc107;
+}
+
+.high-fill{
+    background:#fd7e14;
+}
+
+.critical-fill{
+    background:#dc3545;
+}
+
+.risk-count{
+    width:35px;
+    text-align:right;
+    font-size:9px;
+    font-weight:800;
+}
+
+
+/* =========================================================
+   SYMPTOM RECORDS
+========================================================= */
+
+.records-box{
+    background:white;
+    border-radius:15px;
+    border:1px solid var(--border);
+    box-shadow:var(--shadow);
+    padding:15px;
+}
+
+.records-box h4{
+    color:var(--green-dark);
+    font-size:13px;
+    margin-bottom:11px;
+}
+
+.record{
+    border:1px solid #edf1ef;
+    border-radius:12px;
+    padding:11px;
+    margin-bottom:8px;
+}
+
+.record:last-child{
+    margin-bottom:0;
+}
+
+.record-top{
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+    align-items:center;
+}
+
+.record-date{
+    color:var(--muted);
+    font-size:8px;
+}
+
+.record-risk{
+    padding:4px 7px;
+    border-radius:12px;
+    font-size:8px;
+    font-weight:800;
+}
+
+.record-middle{
+    margin-top:8px;
+    font-size:10px;
+    color:var(--text);
+}
+
+.record-bottom{
+    display:flex;
+    justify-content:space-between;
+    margin-top:7px;
+    color:var(--muted);
+    font-size:8px;
 }
 
 .delete-record-btn{
-  border:0;background:#fff0f1;color:#c82333;border-radius:8px;
-  padding:6px 9px;font-size:10px;font-weight:700;cursor:pointer;
-  transition:all .2s;white-space:nowrap
+    border:0;
+    background:#fff0f1;
+    color:#c82333;
+    border-radius:7px;
+    padding:5px 7px;
+    font-size:8px;
+    font-weight:700;
+    cursor:pointer;
 }
-.delete-record-btn:hover{background:#dc3545;color:#fff}
-.delete-record-btn i{margin-right:4px}
-.delete-note{font-size:10px;color:#8a9691;margin-top:8px}
+
+.no-records{
+    text-align:center;
+    color:var(--muted);
+    padding:20px 10px;
+    font-size:10px;
+}
 
 
-.pending-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:10px;background:#fff0d8;color:#9a6200;font-size:9px;font-weight:800;margin-left:5px}
-.delete-record-btn{border:1px solid #f1c4c8;background:#fff0f1;color:#c82333;border-radius:8px;padding:7px 10px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap}
-.delete-record-btn:hover{background:#dc3545;color:#fff}
-.delete-record-btn i{margin-right:4px}
-.offline-record-badge{display:inline-block;margin-left:5px;padding:3px 6px;border-radius:10px;background:#fff4d8;color:#956000;font-size:9px;font-weight:700}
+/* =========================================================
+   BOTTOM NAV
+========================================================= */
+
+.bottom-nav{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    height:66px;
+    background:rgba(255,255,255,.98);
+    backdrop-filter:blur(12px);
+    border-top:1px solid var(--border);
+    display:flex;
+    justify-content:space-around;
+    align-items:center;
+    z-index:90;
+}
+
+.bottom-nav a{
+    color:#819089;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    font-size:8px;
+    font-weight:700;
+}
+
+.bottom-nav i{
+    font-size:16px;
+}
+
+.bottom-nav a.active{
+    color:var(--green);
+}
+
+
+/* =========================================================
+   SESSION MODAL
+========================================================= */
+
+.idle-modal{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.58);
+    z-index:9999;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+}
+
+.idle-modal.show{
+    display:flex;
+}
+
+.modal-box{
+    background:white;
+    width:min(380px,100%);
+    border-radius:20px;
+    padding:25px;
+    text-align:center;
+}
+
+.modal-box i{
+    font-size:38px;
+    color:#e58a5c;
+}
+
+.modal-box h2{
+    font-size:18px;
+    margin-top:12px;
+}
+
+.modal-box p{
+    font-size:11px;
+    color:var(--muted);
+    margin:8px 0;
+}
+
+.countdown{
+    font-size:42px;
+    font-weight:800;
+    color:#e58a5c;
+    margin:10px;
+}
+
+.modal-buttons{
+    display:flex;
+    justify-content:center;
+    gap:7px;
+}
+
+.modal-buttons button{
+    border:0;
+    padding:10px 15px;
+    border-radius:9px;
+    color:white;
+    font-weight:700;
+    cursor:pointer;
+    font-size:10px;
+}
+
+.stay-btn{
+    background:var(--green);
+}
+
+.logout-modal-btn{
+    background:var(--red);
+}
+
+
+/* =========================================================
+   TOAST
+========================================================= */
+
+.toast{
+    position:fixed;
+    top:75px;
+    left:50%;
+    transform:translateX(-50%);
+    background:#26352e;
+    color:white;
+    padding:11px 15px;
+    border-radius:10px;
+    font-size:10px;
+    z-index:10000;
+    box-shadow:0 8px 25px rgba(0,0,0,.18);
+    max-width:90%;
+    text-align:center;
+}
+
+
+/* =========================================================
+   LARGER SCREENS
+========================================================= */
+
+@media(min-width:700px){
+
+    .container{
+        padding-top:28px;
+    }
+
+    .action-grid{
+        grid-template-columns:repeat(5,1fr);
+    }
+
+    .action-card{
+        min-height:150px;
+    }
+
+    .action-card.full{
+        grid-column:auto;
+        min-height:150px;
+    }
+
+    .detail-stats{
+        grid-template-columns:repeat(4,1fr);
+    }
+}
+
+
+/* =========================================================
+   SMALL PHONES
+========================================================= */
+
+@media(max-width:360px){
+
+    .pregnancy-stat{
+        padding:11px 4px;
+    }
+
+    .pregnancy-stat strong{
+        font-size:12px;
+    }
+
+    .pregnancy-stat .label{
+        font-size:7px;
+    }
+
+    .action-card{
+        min-height:112px;
+        padding:13px;
+    }
+
+    .action-card h4{
+        font-size:13px;
+    }
+
+    .action-card p{
+        font-size:8px;
+    }
+}
+
 </style>
 </head>
 
+
 <body>
 
-<!-- IDLE WARNING MODAL -->
+
+<!-- ======================================================
+     SESSION WARNING
+======================================================= -->
+
 <div class="idle-modal" id="idleModal">
-  <div class="idle-modal-content">
-    <i class="fas fa-clock"></i>
-    <h2>Session Expiring Soon</h2>
-    <p>You have been inactive for a while. Your session will expire in:</p>
-    <div class="countdown-timer" id="countdownTimer">60</div>
-    <p style="font-size:12px;color:#94a3b8;">seconds</p><br>
-    <button class="btn-stay" onclick="stayLoggedIn()"><i class="fas fa-check-circle"></i> Stay Logged In</button>
-    <button class="btn-logout-modal" onclick="logoutNow()"><i class="fas fa-sign-out-alt"></i> Logout Now</button>
-  </div>
+
+    <div class="modal-box">
+
+        <i class="fas fa-clock"></i>
+
+        <h2>Session Expiring</h2>
+
+        <p>
+            You have been inactive for a while.
+            Your session will expire in:
+        </p>
+
+        <div
+            class="countdown"
+            id="countdownTimer"
+        >60</div>
+
+        <p>seconds</p>
+
+        <div class="modal-buttons">
+
+            <button
+                class="stay-btn"
+                onclick="stayLoggedIn()"
+            >
+                <i class="fas fa-check"></i>
+                Stay Logged In
+            </button>
+
+            <button
+                class="logout-modal-btn"
+                onclick="logoutNow()"
+            >
+                <i class="fas fa-sign-out-alt"></i>
+                Logout
+            </button>
+
+        </div>
+
+    </div>
+
 </div>
 
-<!-- TOP BAR -->
-<div class="top-bar" id="top">
-  <div class="page-title">
-    <h1>🏥 MotherCare</h1>
-    <small>Patient Portal</small>
-  </div>
-  <div class="user-info">
-    <div class="session-timer" id="sessionTimer">
-      <i class="fas fa-hourglass-half"></i><span>Session:</span><strong id="timerDisplay">5:00</strong>
-    </div>
-    <span class="welcome-badge"><i class="fas fa-user-circle"></i> <span id="userName">Patient</span></span>
-    <a href="screen1.html" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
-  </div>
-</div>
 
-<div class="main-content" id="mainContent">
+<!-- ======================================================
+     TOP BAR
+======================================================= -->
 
-  <!-- SYNC STATUS: UI ONLY FOR NOW; DOES NOT CHANGE EXISTING API/DATABASE -->
-  <section class="sync-card">
-    <div class="sync-left">
-      <div class="sync-icon"><i class="fas fa-cloud"></i></div>
-      <div>
-        <div class="sync-title">
-          Data Synchronization
-          <span class="sync-status" id="syncStatus"><span class="status-dot"></span><span id="syncStatusText">Online • Connected</span></span>
+<header class="top-bar">
+
+    <div class="brand">
+
+        <div class="brand-icon">
+            <i class="fas fa-heartbeat"></i>
         </div>
-        <p id="pendingSync">Your dashboard is ready. Automatic data synchronization can be connected later.</p>
-      </div>
-    </div>
-    <button class="sync-button" id="syncButton" type="button" onclick="syncNow()">
-      <i class="fas fa-sync-alt"></i> Sync Now
-    </button>
-  </section>
 
-  <!-- FOUR MAIN FEATURES -->
-  <section class="feature-grid">
-    <a class="feature-card analytics" href="#analytics">
-      <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
-      <div class="feature-title">Health Analytics</div>
-      <div class="feature-footer"><span>Open analytics</span><i class="fas fa-arrow-right"></i></div>
-    </a>
+        <div class="brand-text">
 
-    <a class="feature-card symptoms" href="screen6.html">
-      <div class="feature-icon"><i class="fas fa-stethoscope"></i></div>
-      <div class="feature-title">Check Symptoms</div>
-      <div class="feature-footer"><span>Start assessment</span><i class="fas fa-arrow-right"></i></div>
-    </a>
+            <h1>MotherCare</h1>
 
-    <a class="feature-card doctor" href="consult_doctor.php">
-      <div class="feature-icon"><i class="fas fa-user-md"></i></div>
-      <div class="feature-title">Consult Doctor</div>
-      <div class="feature-footer"><span>Talk to a doctor</span><i class="fas fa-arrow-right"></i></div>
-    </a>
+            <small>
+                Maternal Health
+            </small>
 
-    <a class="feature-card profile" href="screen4.html">
-      <div class="feature-icon"><i class="fas fa-user-edit"></i></div>
-      <div class="feature-title">Update Profile</div>
-      <div class="feature-footer"><span>Manage profile</span><i class="fas fa-arrow-right"></i></div>
-    </a>
-  </section>
-
-  <!-- COMPACT OVERVIEW -->
-  <section class="quick-overview">
-    <div class="overview-heading">
-      <h2>Pregnancy Overview</h2>
-      <a href="#analytics">View details →</a>
-    </div>
-    <div class="overview-grid">
-      <div class="overview-item"><span><i class="fas fa-calendar-check"></i> Visits</span><strong id="totalVisits">-</strong></div>
-      <div class="overview-item"><span><i class="fas fa-heartbeat"></i> Risk Level</span><strong id="latestRisk">-</strong></div>
-      <div class="overview-item"><span><i class="fas fa-baby"></i> Due Date</span><strong id="eddDate">-</strong></div>
-    </div>
-  </section>
-
-  <!-- DETAILED ANALYTICS HIDDEN UNDER HEALTH ANALYTICS -->
-  <section class="analytics-section" id="analytics">
-    <div class="analytics-header">
-      <div><h2>Health Analytics</h2><p>Your detailed pregnancy health information.</p></div>
-      <a class="back-link" href="#top">↑ Back to dashboard</a>
-    </div>
-
-    <!-- Existing IDs preserved -->
-    <div class="stats-grid" id="overview">
-      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-number" id="totalVisitsCard">-</div><div class="stat-label">Total Health Visits</div></div>
-      <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-number" id="avgRiskCard">-</div><div class="stat-label">Average Risk Score</div></div>
-      <div class="stat-card"><div class="stat-icon">❤️</div><div class="stat-number" id="latestRiskCard">-</div><div class="stat-label">Latest Risk Level</div></div>
-      <div class="stat-card"><div class="stat-icon">👶</div><div class="stat-number" id="eddDateCard">-</div><div class="stat-label">Expected Delivery</div></div>
-    </div>
-
-    <div class="section">
-      <h3>📈 Risk Distribution</h3>
-      <div class="chart-container">
-        <div class="chart-box">
-          <h4>Risk Levels Overview</h4>
-          <div class="chart-bar" id="riskChart">
-            <div class="bar-item"><div class="bar-value" id="lowCount">0</div><div class="bar" style="height:30px;background:#28a745" id="lowBar"></div><div class="bar-label">Low</div></div>
-            <div class="bar-item"><div class="bar-value" id="moderateCount">0</div><div class="bar" style="height:30px;background:#ffc107" id="moderateBar"></div><div class="bar-label">Moderate</div></div>
-            <div class="bar-item"><div class="bar-value" id="highCount">0</div><div class="bar" style="height:30px;background:#fd7e14" id="highBar"></div><div class="bar-label">High</div></div>
-            <div class="bar-item"><div class="bar-value" id="criticalCount">0</div><div class="bar" style="height:30px;background:#dc3545" id="criticalBar"></div><div class="bar-label">Critical</div></div>
-          </div>
         </div>
-        <div class="chart-box">
-          <h4>Risk Level Summary</h4>
-          <div id="riskSummary" style="width:100%">
-            <div class="risk-level-item"><span><span class="risk-dot low"></span>Low</span><span id="lowSummary">0 visits</span></div>
-            <div class="risk-level-item"><span><span class="risk-dot moderate"></span>Moderate</span><span id="moderateSummary">0 visits</span></div>
-            <div class="risk-level-item"><span><span class="risk-dot high"></span>High</span><span id="highSummary">0 visits</span></div>
-            <div class="risk-level-item"><span><span class="risk-dot critical"></span>Critical</span><span id="criticalSummary">0 visits</span></div>
-          </div>
+
+    </div>
+
+
+    <div class="user-area">
+
+        <div class="welcome">
+
+            <i class="fas fa-user-circle"></i>
+
+            <span id="userName">
+                Patient
+            </span>
+
         </div>
-      </div>
+
+
+        <button
+            class="logout-btn"
+            onclick="logoutNow()"
+            title="Logout"
+        >
+            <i class="fas fa-sign-out-alt"></i>
+        </button>
+
     </div>
 
-    <div class="section">
-      <div class="section-header">
-        <h3>📋 Recent Symptoms Records</h3>
-      </div>
-      <div class="table-wrapper">
-        <table>
-          <thead><tr><th>Date</th><th>Symptoms</th><th>Blood Pressure</th><th>Risk Level</th><th>Risk Score</th><th>Action</th></tr></thead>
-          <tbody id="symptomsTableBody">
-            <tr><td colspan="6" style="text-align:center;color:#6c757d;padding:30px"><i class="fas fa-spinner fa-spin"></i> Loading data...</td></tr>
-          </tbody>
-        </table>
-      </div>
+</header>
+
+
+<!-- ======================================================
+     MAIN
+======================================================= -->
+
+<main class="container">
+
+
+    <!-- WELCOME -->
+
+    <section class="welcome-section">
+
+        <h2>
+            Welcome back, <span id="welcomeName">Patient</span>
+        </h2>
+
+        <p>
+            Stay informed about your pregnancy health.
+        </p>
+
+    </section>
+
+
+    <!-- ==================================================
+         PREGNANCY SUMMARY
+    =================================================== -->
+
+    <section class="pregnancy-card">
+
+        <div class="pregnancy-heading">
+
+            <div class="pregnancy-heading-icon">
+                <i class="fas fa-baby"></i>
+            </div>
+
+            <div>
+
+                <h3>
+                    Your Pregnancy
+                </h3>
+
+                <small>
+                    Current pregnancy overview
+                </small>
+
+            </div>
+
+        </div>
+
+
+        <div class="pregnancy-stats">
+
+
+            <!-- DUE DATE -->
+
+            <div class="pregnancy-stat">
+
+                <i class="fas fa-calendar-check"></i>
+
+                <span class="label">
+                    DUE DATE
+                </span>
+
+                <strong id="eddDate">
+                    —
+                </strong>
+
+            </div>
+
+
+            <!-- WEEKS -->
+
+            <div class="pregnancy-stat">
+
+                <i class="fas fa-hourglass-half"></i>
+
+                <span class="label">
+                    PREGNANCY
+                </span>
+
+                <strong id="weeksPregnant">
+                    —
+                </strong>
+
+            </div>
+
+
+            <!-- RISK -->
+
+            <div class="pregnancy-stat">
+
+                <i class="fas fa-heartbeat"></i>
+
+                <span class="label">
+                    AVG. RISK
+                </span>
+
+                <strong id="averageRisk">
+                    —
+                </strong>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ==================================================
+         FIVE MAIN BUTTONS
+    =================================================== -->
+
+    <div class="section-heading">
+
+        <h3>
+            What would you like to do?
+        </h3>
+
+        <span>
+            MotherCare
+        </span>
+
     </div>
 
-    <div class="section">
-      <h3>📊 Quick Insights</h3>
-      <div class="quick-insights">
-        <div class="insight-card"><div class="number" id="insightTotal">-</div><div class="label">Total Assessments</div></div>
-        <div class="insight-card"><div class="number" id="insightRisk">-</div><div class="label">Current Risk Level</div></div>
-        <div class="insight-card"><div class="number" id="insightAvg">-</div><div class="label">Average Risk Score</div></div>
-        <div class="insight-card"><div class="number" id="insightRecords">-</div><div class="label">Total Records</div></div>
-      </div>
-    </div>
-  </section>
-</div>
 
-<!-- Simple navigation remains available without a large sidebar -->
+    <section class="action-grid">
+
+
+        <!-- 1. CHECK SYMPTOMS -->
+
+        <a
+            href="screen6.html"
+            class="action-card symptoms"
+        >
+
+            <div class="action-icon">
+                <i class="fas fa-stethoscope"></i>
+            </div>
+
+            <div>
+
+                <h4>
+                    Check Symptoms
+                </h4>
+
+                <p>
+                    Assess your current symptoms
+                </p>
+
+            </div>
+
+            <div class="action-arrow">
+                <i class="fas fa-arrow-right"></i>
+            </div>
+
+        </a>
+
+
+        <!-- 2. CONSULT DOCTOR -->
+
+        <a
+            href="consult_doctor.php"
+            class="action-card doctor"
+        >
+
+            <div class="action-icon">
+                <i class="fas fa-user-md"></i>
+            </div>
+
+            <div>
+
+                <h4>
+                    Consult Doctor
+                </h4>
+
+                <p>
+                    Talk to a healthcare professional
+                </p>
+
+            </div>
+
+            <div class="action-arrow">
+                <i class="fas fa-arrow-right"></i>
+            </div>
+
+        </a>
+
+
+        <!-- 3. HEALTH DETAILS -->
+
+        <button
+            type="button"
+            class="action-card details"
+            onclick="toggleHealthDetails()"
+            style="border:0;text-align:left;cursor:pointer;"
+        >
+
+            <div class="action-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+
+            <div>
+
+                <h4>
+                    Health Details
+                </h4>
+
+                <p>
+                    View records and health analytics
+                </p>
+
+            </div>
+
+            <div class="action-arrow">
+                <i class="fas fa-chevron-down" id="detailsArrow"></i>
+            </div>
+
+        </button>
+
+
+        <!-- 4. MY PROFILE -->
+
+        <a
+            href="screen4.php"
+            class="action-card profile"
+        >
+
+            <div class="action-icon">
+                <i class="fas fa-user-edit"></i>
+            </div>
+
+            <div>
+
+                <h4>
+                    My Profile
+                </h4>
+
+                <p>
+                    View or update your information
+                </p>
+
+            </div>
+
+            <div class="action-arrow">
+                <i class="fas fa-arrow-right"></i>
+            </div>
+
+        </a>
+
+
+        <!-- 5. SYNC DATA -->
+
+        <button
+            type="button"
+            class="action-card sync"
+            onclick="syncNow()"
+            id="mainSyncButton"
+            style="border:0;text-align:left;cursor:pointer;"
+        >
+
+            <div class="action-icon">
+                <i class="fas fa-sync-alt"></i>
+            </div>
+
+            <div>
+
+                <h4>
+                    Sync Data
+                </h4>
+
+                <p id="mainSyncText">
+                    Synchronize saved health records
+                </p>
+
+            </div>
+
+            <div class="action-arrow">
+                <i class="fas fa-sync-alt"></i>
+            </div>
+
+        </button>
+
+    </section>
+
+
+    <!-- ==================================================
+         SYNC STATUS
+    =================================================== -->
+
+    <section class="sync-mini">
+
+        <div class="sync-info">
+
+            <div class="sync-icon">
+                <i class="fas fa-cloud"></i>
+            </div>
+
+            <div class="sync-text">
+
+                <div class="sync-title">
+                    Data Status
+                </div>
+
+                <div
+                    class="sync-status"
+                    id="syncStatus"
+                >
+
+                    <span class="status-dot"></span>
+
+                    <span id="syncStatusText">
+                        Online • Connected
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <button
+            type="button"
+            class="sync-button"
+            id="syncButton"
+            onclick="syncNow()"
+        >
+            <i class="fas fa-sync-alt"></i>
+            Sync
+        </button>
+
+    </section>
+
+
+    <div
+        id="pendingSync"
+        style="
+            text-align:center;
+            color:#718078;
+            font-size:8px;
+            margin-top:6px;
+        "
+    >
+        Your health data is synchronized.
+    </div>
+
+
+    <!-- ==================================================
+         HIDDEN HEALTH DETAILS
+    =================================================== -->
+
+    <section
+        class="health-details"
+        id="healthDetails"
+    >
+
+
+        <!-- HEADER -->
+
+        <div class="details-header">
+
+            <div class="details-header-row">
+
+                <div>
+
+                    <h3>
+                        Health Details
+                    </h3>
+
+                    <p>
+                        Your pregnancy records and risk information.
+                    </p>
+
+                </div>
+
+                <button
+                    type="button"
+                    class="close-details"
+                    onclick="toggleHealthDetails()"
+                >
+
+                    <i class="fas fa-times"></i>
+
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- DETAIL STATISTICS -->
+
+        <div class="detail-stats">
+
+
+            <div class="detail-stat">
+
+                <div class="detail-stat-icon">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+
+                <div
+                    class="detail-stat-number"
+                    id="totalVisitsCard"
+                >
+                    —
+                </div>
+
+                <div class="detail-stat-label">
+                    Health Visits
+                </div>
+
+            </div>
+
+
+            <div class="detail-stat">
+
+                <div class="detail-stat-icon">
+                    <i class="fas fa-heartbeat"></i>
+                </div>
+
+                <div
+                    class="detail-stat-number"
+                    id="latestRiskCard"
+                >
+                    —
+                </div>
+
+                <div class="detail-stat-label">
+                    Latest Risk
+                </div>
+
+            </div>
+
+
+            <div class="detail-stat">
+
+                <div class="detail-stat-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+
+                <div
+                    class="detail-stat-number"
+                    id="avgRiskCard"
+                >
+                    —
+                </div>
+
+                <div class="detail-stat-label">
+                    Average Risk Level
+                </div>
+
+            </div>
+
+
+            <div class="detail-stat">
+
+                <div class="detail-stat-icon">
+                    <i class="fas fa-baby"></i>
+                </div>
+
+                <div
+                    class="detail-stat-number"
+                    id="eddDateCard"
+                >
+                    —
+                </div>
+
+                <div class="detail-stat-label">
+                    Expected Delivery
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- RISK DISTRIBUTION -->
+
+        <div class="detail-box">
+
+            <h4>
+                Risk Distribution
+            </h4>
+
+
+            <div class="risk-row">
+
+                <span class="risk-name">
+                    Low
+                </span>
+
+                <div class="risk-track">
+                    <div
+                        class="risk-fill low-fill"
+                        id="lowBar"
+                    ></div>
+                </div>
+
+                <span
+                    class="risk-count"
+                    id="lowCount"
+                >
+                    0
+                </span>
+
+            </div>
+
+
+            <div class="risk-row">
+
+                <span class="risk-name">
+                    Moderate
+                </span>
+
+                <div class="risk-track">
+                    <div
+                        class="risk-fill moderate-fill"
+                        id="moderateBar"
+                    ></div>
+                </div>
+
+                <span
+                    class="risk-count"
+                    id="moderateCount"
+                >
+                    0
+                </span>
+
+            </div>
+
+
+            <div class="risk-row">
+
+                <span class="risk-name">
+                    High
+                </span>
+
+                <div class="risk-track">
+                    <div
+                        class="risk-fill high-fill"
+                        id="highBar"
+                    ></div>
+                </div>
+
+                <span
+                    class="risk-count"
+                    id="highCount"
+                >
+                    0
+                </span>
+
+            </div>
+
+
+            <div class="risk-row">
+
+                <span class="risk-name">
+                    Critical
+                </span>
+
+                <div class="risk-track">
+                    <div
+                        class="risk-fill critical-fill"
+                        id="criticalBar"
+                    ></div>
+                </div>
+
+                <span
+                    class="risk-count"
+                    id="criticalCount"
+                >
+                    0
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- SYMPTOM RECORDS -->
+
+        <div class="records-box">
+
+            <h4>
+                <i class="fas fa-notes-medical"></i>
+                Recent Symptom Records
+            </h4>
+
+            <div id="symptomsRecords">
+
+                <div class="no-records">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    Loading records...
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+</main>
+
+
+<!-- ======================================================
+     BOTTOM NAVIGATION
+======================================================= -->
+
 <nav class="bottom-nav">
-  <a href="#top" class="active"><i class="fas fa-home"></i><span>Home</span></a>
-  <a href="consult_doctor.php"><i class="fas fa-user-md"></i><span>Doctor</span></a>
-  <a href="#analytics"><i class="fas fa-chart-line"></i><span>Analytics</span></a>
-  <a href="screen4.html"><i class="fas fa-user"></i><span>Profile</span></a>
+
+    <a
+        href="#"
+        class="active"
+    >
+        <i class="fas fa-home"></i>
+        <span>Home</span>
+    </a>
+
+
+    <a href="screen6.html">
+
+        <i class="fas fa-stethoscope"></i>
+
+        <span>
+            Symptoms
+        </span>
+
+    </a>
+
+
+    <a href="consult_doctor.php">
+
+        <i class="fas fa-user-md"></i>
+
+        <span>
+            Doctor
+        </span>
+
+    </a>
+
+
+    <a href="screen4.php">
+
+        <i class="fas fa-user"></i>
+
+        <span>
+            Profile
+        </span>
+
+    </a>
+
 </nav>
 
-<script>
-// ============================================
-// AUTO SIGN-OUT AFTER 5 MINUTES INACTIVITY
-// ============================================
 
-const SESSION_TIMEOUT = 5;
+<script>
+
+/* =========================================================
+   SESSION TIMEOUT
+========================================================= */
+
+const SESSION_TIMEOUT = 5 * 60;
 const WARNING_TIME = 60;
 
-let idleTimer, countdownTimer;
-let secondsLeft = SESSION_TIMEOUT * 60;
+let secondsLeft = SESSION_TIMEOUT;
+let idleTimer = null;
+let countdownTimer = null;
 let warningShown = false;
 
-const timerDisplay = document.getElementById('timerDisplay');
-const sessionTimer = document.getElementById('sessionTimer');
-const idleModal = document.getElementById('idleModal');
-const countdownDisplay = document.getElementById('countdownTimer');
+const timerEvents = [
+    'mousemove',
+    'mousedown',
+    'keypress',
+    'touchstart',
+    'scroll'
+];
 
-function resetIdleTimer() {
-    secondsLeft = SESSION_TIMEOUT * 60;
+
+function resetIdleTimer(){
+
+    secondsLeft = SESSION_TIMEOUT;
     warningShown = false;
-    idleModal.classList.remove('show');
+
     clearInterval(idleTimer);
     clearInterval(countdownTimer);
-    updateTimerDisplay();
-    sessionTimer.className = 'session-timer';
-    idleTimer = setInterval(checkIdleTime, 1000);
+
+    document
+        .getElementById('idleModal')
+        .classList
+        .remove('show');
+
+    idleTimer =
+        setInterval(
+            checkIdleTime,
+            1000
+        );
 }
 
-function checkIdleTime() {
+
+function checkIdleTime(){
+
     secondsLeft--;
-    updateTimerDisplay();
-    if (secondsLeft <= WARNING_TIME && !warningShown) {
+
+    if(
+        secondsLeft <= WARNING_TIME &&
+        !warningShown
+    ){
+
         warningShown = true;
-        showWarningModal();
+
+        showWarning();
+
     }
-    if (secondsLeft <= 0) {
+
+    if(secondsLeft <= 0){
+
         logoutNow();
+
     }
+
 }
 
-function updateTimerDisplay() {
-    const minutes = Math.floor(secondsLeft / 60);
-    const seconds = secondsLeft % 60;
-    timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    if (secondsLeft <= 60) sessionTimer.className = 'session-timer danger';
-    else if (secondsLeft <= 120) sessionTimer.className = 'session-timer warning';
+
+function showWarning(){
+
+    const modal =
+        document.getElementById(
+            'idleModal'
+        );
+
+    const counter =
+        document.getElementById(
+            'countdownTimer'
+        );
+
+    modal.classList.add('show');
+
+    let count = WARNING_TIME;
+
+    counter.textContent = count;
+
+    countdownTimer =
+        setInterval(() => {
+
+            count--;
+
+            counter.textContent =
+                count;
+
+            if(count <= 0){
+
+                clearInterval(
+                    countdownTimer
+                );
+
+            }
+
+        },1000);
+
 }
 
-function showWarningModal() {
-    idleModal.classList.add('show');
-    let countdown = WARNING_TIME;
-    countdownDisplay.textContent = countdown;
-    countdownTimer = setInterval(() => {
-        countdown--;
-        countdownDisplay.textContent = countdown;
-        if (countdown <= 0) clearInterval(countdownTimer);
-    }, 1000);
-}
 
-function stayLoggedIn() {
+function stayLoggedIn(){
+
     resetIdleTimer();
-    showToast('Session extended!', 'success');
+
+    showToast(
+        'Session extended.',
+        'success'
+    );
+
 }
 
-function logoutNow() {
+
+function logoutNow(){
+
     clearInterval(idleTimer);
     clearInterval(countdownTimer);
-    showToast('Logging out...', 'info');
-    setTimeout(() => { window.location.href = 'screen1.html'; }, 1000);
+
+    /*
+     * Keep the existing MotherCare logout
+     * destination.
+     */
+    window.location.href =
+        'screen1.html';
+
 }
 
-function showToast(message, type = 'info') {
-    const old = document.getElementById('toast');
-    if (old) old.remove();
-    const toast = document.createElement('div');
-    toast.id = 'toast';
-    const colors = { success: '#2e7d32', error: '#dc3545', info: '#17a2b8' };
-    toast.style.cssText = `
-        position: fixed; top: 20px; right: 20px; padding: 16px 24px;
-        border-radius: 12px; color: white; font-weight: 500;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-        transform: translateX(400px); transition: transform 0.3s ease;
-        z-index: 1000; max-width: 350px;
-        background: ${colors[type] || colors.info};
-    `;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => { toast.style.transform = 'translateX(0)'; }, 100);
-    setTimeout(() => { toast.style.transform = 'translateX(400px)'; }, 4000);
-}
 
-document.addEventListener('mousemove', resetIdleTimer);
-document.addEventListener('keypress', resetIdleTimer);
-document.addEventListener('click', resetIdleTimer);
-document.addEventListener('scroll', resetIdleTimer);
+timerEvents.forEach(
+    event => {
 
-// ============================================
-// FETCH DATA FROM API
-// ============================================
+        document.addEventListener(
+            event,
+            resetIdleTimer,
+            {passive:true}
+        );
 
-function fetchData() {
-    fetch('VisitSummary.php')
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                console.error('Error:', data.error);
-                return;
-            }
-            
-            // Update user name
-            document.getElementById('userName').textContent = data.name?.split(' ')[0] || 'Patient';
-            
-            // Update stats
-            const totalVisits = data.visits ? data.visits.length : 0;
-            document.getElementById('totalVisits').textContent = totalVisits;
-            document.getElementById('totalVisitsCard').textContent = totalVisits;
-            document.getElementById('insightTotal').textContent = totalVisits;
-            document.getElementById('insightRecords').textContent = totalVisits;
-            
-            const latestRisk = data.visits && data.visits.length > 0 ? data.visits[0].risk_level : 'No Data';
-            document.getElementById('latestRisk').textContent = latestRisk;
-            document.getElementById('latestRiskCard').textContent = latestRisk;
-            document.getElementById('insightRisk').textContent = latestRisk;
-            
-            // Color the risk
-            const riskElement = document.getElementById('latestRiskCard');
-            const riskColors = { 'Low': '#2e7d32', 'Moderate': '#ffc107', 'High': '#fd7e14', 'Critical': '#dc3545' };
-            riskElement.style.color = riskColors[latestRisk] || 'gray';
-            
-            const edd = data.expected_delivery && data.expected_delivery !== 'N/A' ? 
-                data.expected_delivery.substring(0, 10) : 'Not Set';
-            document.getElementById('eddDate').textContent = edd;
-            document.getElementById('eddDateCard').textContent = edd;
-            
-            // Calculate average risk
-            if (data.visits && data.visits.length > 0) {
-                let totalRisk = 0;
-                const riskMap = {'Low': 1, 'Moderate': 2, 'High': 3, 'Critical': 4};
-                data.visits.forEach(visit => {
-                    totalRisk += riskMap[visit.risk_level] || 0;
-                });
-                const avgRisk = (totalRisk / data.visits.length).toFixed(1);
-                document.getElementById('avgRiskCard').textContent = avgRisk;
-                document.getElementById('insightAvg').textContent = avgRisk + '%';
-            }
-            
-            // Update symptoms table
-            updateTable(data.visits || []);
-            
-            // Update risk distribution
-            updateRiskDistribution(data.visits || []);
-        })
-        .catch(error => {
-            console.error('Error fetching data:', error);
-            document.getElementById('symptomsTableBody').innerHTML = `
-                <tr><td colspan="6" style="text-align:center;color:#dc3545;padding:30px;">
-                    <i class="fas fa-exclamation-circle"></i> Failed to load data
-                </td></tr>
-            `;
-        });
-}
-
-function updateTable(visits) {
-    const tbody = document.getElementById('symptomsTableBody');
-
-    if (!visits || visits.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="6" style="text-align:center;color:#6c757d;padding:30px;">
-                    <i class="fas fa-clipboard-list"></i> No symptoms records found
-                </td>
-            </tr>
-        `;
-        return;
     }
+);
+
+
+/* =========================================================
+   HEALTH DETAILS TOGGLE
+========================================================= */
+
+function toggleHealthDetails(){
+
+    const section =
+        document.getElementById(
+            'healthDetails'
+        );
+
+    const arrow =
+        document.getElementById(
+            'detailsArrow'
+        );
+
+
+    const isOpen =
+        section.classList.contains(
+            'open'
+        );
+
+
+    if(isOpen){
+
+        section.classList.remove(
+            'open'
+        );
+
+        if(arrow){
+
+            arrow.className =
+                'fas fa-chevron-down';
+
+        }
+
+    }else{
+
+        section.classList.add(
+            'open'
+        );
+
+        if(arrow){
+
+            arrow.className =
+                'fas fa-chevron-up';
+
+        }
+
+
+        setTimeout(() => {
+
+            section.scrollIntoView({
+                behavior:'smooth',
+                block:'start'
+            });
+
+        },100);
+
+    }
+
+}
+
+
+/* =========================================================
+   TOAST
+========================================================= */
+
+function showToast(
+    message,
+    type='info'
+){
+
+    const old =
+        document.getElementById(
+            'mothercareToast'
+        );
+
+    if(old){
+
+        old.remove();
+
+    }
+
+
+    const toast =
+        document.createElement(
+            'div'
+        );
+
+    toast.id =
+        'mothercareToast';
+
+    toast.className =
+        'toast';
+
+    toast.textContent =
+        message;
+
+    document.body.appendChild(
+        toast
+    );
+
+
+    setTimeout(() => {
+
+        toast.remove();
+
+    },3500);
+
+}
+
+
+/* =========================================================
+   RISK HELPERS
+========================================================= */
+
+function normalizeRisk(
+    risk
+){
+
+    if(!risk){
+
+        return 'No Data';
+
+    }
+
+    return String(risk)
+        .trim()
+        .replace(
+            /^\w/,
+            c => c.toUpperCase()
+        );
+
+}
+
+
+function riskClass(
+    risk
+){
+
+    const value =
+        normalizeRisk(
+            risk
+        ).toLowerCase();
+
+
+    if(value === 'low')
+        return 'risk-low';
+
+    if(value === 'moderate')
+        return 'risk-moderate';
+
+    if(value === 'high')
+        return 'risk-high';
+
+    if(value === 'critical')
+        return 'risk-critical';
+
+    return '';
+
+}
+
+
+/* =========================================================
+   PREGNANCY WEEK CALCULATION
+========================================================= */
+
+function calculatePregnancyWeeks(
+    lastPeriod
+){
+
+    if(!lastPeriod){
+
+        return 'Not Set';
+
+    }
+
+
+    const lmp =
+        new Date(
+            lastPeriod
+        );
+
+
+    if(
+        isNaN(
+            lmp.getTime()
+        )
+    ){
+
+        return 'Not Set';
+
+    }
+
+
+    const today =
+        new Date();
+
+
+    const difference =
+        today.getTime() -
+        lmp.getTime();
+
+
+    const days =
+        Math.floor(
+            difference /
+            (1000 * 60 * 60 * 24)
+        );
+
+
+    if(days < 0){
+
+        return '0 weeks';
+
+    }
+
+
+    const weeks =
+        Math.floor(
+            days / 7
+        );
+
+
+    const remainingDays =
+        days % 7;
+
+
+    if(weeks > 45){
+
+        return '—';
+
+    }
+
+
+    return (
+        weeks +
+        'w ' +
+        remainingDays +
+        'd'
+    );
+
+}
+
+
+/* =========================================================
+   DATE FORMAT
+========================================================= */
+
+function formatDate(
+    value
+){
+
+    if(
+        !value ||
+        value === 'N/A'
+    ){
+
+        return 'Not Set';
+
+    }
+
+
+    const date =
+        new Date(
+            value
+        );
+
+
+    if(
+        isNaN(
+            date.getTime()
+        )
+    ){
+
+        /*
+         * Handle YYYY-MM-DD manually
+         */
+        const parts =
+            String(value)
+                .substring(0,10)
+                .split('-');
+
+
+        if(parts.length === 3){
+
+            return (
+                parts[2] +
+                '/' +
+                parts[1] +
+                '/' +
+                parts[0]
+            );
+
+        }
+
+        return String(value);
+
+    }
+
+
+    return date.toLocaleDateString(
+        'en-GB',
+        {
+            day:'2-digit',
+            month:'short',
+            year:'numeric'
+        }
+    );
+
+}
+
+
+/* =========================================================
+   FETCH MOTHERCARE DATA
+========================================================= */
+
+function fetchData(){
+
+    fetch(
+        'VisitSummary.php',
+        {
+            cache:'no-store'
+        }
+    )
+
+    .then(
+        response => {
+
+            if(!response.ok){
+
+                throw new Error(
+                    'Server returned ' +
+                    response.status
+                );
+
+            }
+
+            return response.json();
+
+        }
+    )
+
+    .then(
+        data => {
+
+            if(data.error){
+
+                console.error(
+                    data.error
+                );
+
+                return;
+
+            }
+
+
+            /*
+             * USER NAME
+             */
+
+            const fullName =
+                data.name ||
+                'Patient';
+
+
+            const firstName =
+                fullName
+                    .split(' ')[0] ||
+                    'Patient';
+
+
+            document
+                .getElementById(
+                    'userName'
+                )
+                .textContent =
+                firstName;
+
+
+            document
+                .getElementById(
+                    'welcomeName'
+                )
+                .textContent =
+                firstName;
+
+
+            /*
+             * VISITS
+             */
+
+            const visits =
+                Array.isArray(
+                    data.visits
+                )
+                ? data.visits
+                : [];
+
+
+            const totalVisits =
+                visits.length;
+
+
+            document
+                .getElementById(
+                    'totalVisitsCard'
+                )
+                .textContent =
+                totalVisits;
+
+
+            /*
+             * LATEST RISK
+             */
+
+            const latestRisk =
+                visits.length
+                ? normalizeRisk(
+                    visits[0].risk_level
+                )
+                : 'No Data';
+
+
+            document
+                .getElementById(
+                    'latestRiskCard'
+                )
+                .textContent =
+                latestRisk;
+
+
+            /*
+             * EDD
+             */
+
+            const expectedDelivery =
+                data.expected_delivery &&
+                data.expected_delivery !== 'N/A'
+                ? data.expected_delivery
+                : null;
+
+
+            const formattedEDD =
+                formatDate(
+                    expectedDelivery
+                );
+
+
+            document
+                .getElementById(
+                    'eddDate'
+                )
+                .textContent =
+                formattedEDD;
+
+
+            document
+                .getElementById(
+                    'eddDateCard'
+                )
+                .textContent =
+                formattedEDD;
+
+
+            /*
+             * LMP
+             *
+             * VisitSummary.php may return
+             * last_period or last_menstrual_period.
+             */
+
+            const lastPeriod =
+                data.last_period ||
+                data.last_menstrual_period ||
+                data.lmp ||
+                data.profile?.last_period ||
+                null;
+
+
+            document
+                .getElementById(
+                    'weeksPregnant'
+                )
+                .textContent =
+                calculatePregnancyWeeks(
+                    lastPeriod
+                );
+
+
+            /*
+             * AVERAGE RISK
+             *
+             * The existing API supplies risk_level
+             * categories. We therefore display the
+             * average categorical level rather than
+             * falsely presenting it as a percentage.
+             */
+
+            calculateAverageRisk(
+                visits
+            );
+
+
+            /*
+             * RISK DISTRIBUTION
+             */
+
+            updateRiskDistribution(
+                visits
+            );
+
+
+            /*
+             * RECORDS
+             */
+
+            updateRecords(
+                visits
+            );
+
+        }
+    )
+
+    .catch(
+        error => {
+
+            console.error(
+                'MotherCare dashboard error:',
+                error
+            );
+
+            showToast(
+                'Unable to load some health information.',
+                'error'
+            );
+
+            document
+                .getElementById(
+                    'weeksPregnant'
+                )
+                .textContent =
+                '—';
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   AVERAGE RISK
+========================================================= */
+
+function calculateAverageRisk(
+    visits
+){
+
+    if(!visits.length){
+
+        document
+            .getElementById(
+                'averageRisk'
+            )
+            .textContent =
+            'No Data';
+
+        document
+            .getElementById(
+                'avgRiskCard'
+            )
+            .textContent =
+            'No Data';
+
+        return;
+
+    }
+
+
+    const map = {
+
+        Low:1,
+
+        Moderate:2,
+
+        High:3,
+
+        Critical:4
+
+    };
+
+
+    let total = 0;
+
+    let count = 0;
+
+
+    visits.forEach(
+        visit => {
+
+            const level =
+                normalizeRisk(
+                    visit.risk_level
+                );
+
+
+            if(
+                map[level]
+            ){
+
+                total +=
+                    map[level];
+
+                count++;
+
+            }
+
+        }
+    );
+
+
+    if(!count){
+
+        document
+            .getElementById(
+                'averageRisk'
+            )
+            .textContent =
+            'No Data';
+
+        return;
+
+    }
+
+
+    const average =
+        total / count;
+
+
+    let label;
+
+
+    if(average < 1.5){
+
+        label = 'Low';
+
+    }else if(average < 2.5){
+
+        label = 'Moderate';
+
+    }else if(average < 3.5){
+
+        label = 'High';
+
+    }else{
+
+        label = 'Critical';
+
+    }
+
+
+    const display =
+        label;
+
+
+    document
+        .getElementById(
+            'averageRisk'
+        )
+        .textContent =
+        display;
+
+
+    document
+        .getElementById(
+            'avgRiskCard'
+        )
+        .textContent =
+        display;
+
+
+    const element =
+        document
+            .getElementById(
+                'averageRisk'
+            );
+
+
+    element.className =
+        riskClass(
+            label
+        );
+
+}
+
+
+/* =========================================================
+   RISK DISTRIBUTION
+========================================================= */
+
+function updateRiskDistribution(
+    visits
+){
+
+    const counts = {
+
+        Low:0,
+
+        Moderate:0,
+
+        High:0,
+
+        Critical:0
+
+    };
+
+
+    visits.forEach(
+        visit => {
+
+            const level =
+                normalizeRisk(
+                    visit.risk_level
+                );
+
+
+            if(
+                Object.prototype.hasOwnProperty.call(
+                    counts,
+                    level
+                )
+            ){
+
+                counts[level]++;
+
+            }
+
+        }
+    );
+
+
+    const max =
+        Math.max(
+            ...Object.values(
+                counts
+            ),
+            1
+        );
+
+
+    document
+        .getElementById(
+            'lowCount'
+        )
+        .textContent =
+        counts.Low;
+
+
+    document
+        .getElementById(
+            'moderateCount'
+        )
+        .textContent =
+        counts.Moderate;
+
+
+    document
+        .getElementById(
+            'highCount'
+        )
+        .textContent =
+        counts.High;
+
+
+    document
+        .getElementById(
+            'criticalCount'
+        )
+        .textContent =
+        counts.Critical;
+
+
+    document
+        .getElementById(
+            'lowBar'
+        )
+        .style.width =
+        (
+            counts.Low /
+            max *
+            100
+        ) + '%';
+
+
+    document
+        .getElementById(
+            'moderateBar'
+        )
+        .style.width =
+        (
+            counts.Moderate /
+            max *
+            100
+        ) + '%';
+
+
+    document
+        .getElementById(
+            'highBar'
+        )
+        .style.width =
+        (
+            counts.High /
+            max *
+            100
+        ) + '%';
+
+
+    document
+        .getElementById(
+            'criticalBar'
+        )
+        .style.width =
+        (
+            counts.Critical /
+            max *
+            100
+        ) + '%';
+
+}
+
+
+/* =========================================================
+   HEALTH RECORDS
+========================================================= */
+
+function updateRecords(
+    visits
+){
+
+    const container =
+        document.getElementById(
+            'symptomsRecords'
+        );
+
+
+    if(
+        !visits ||
+        !visits.length
+    ){
+
+        container.innerHTML = `
+            <div class="no-records">
+                <i class="fas fa-clipboard-list"></i>
+                <br><br>
+                No symptom records found.
+            </div>
+        `;
+
+        return;
+
+    }
+
 
     let html = '';
 
-    visits.slice(0, 10).forEach((visit, index) => {
-        const riskClass = (visit.risk_level || 'low').toLowerCase();
-        const riskScore = visit.risk_score ?? visit.risk ?? 'N/A';
-        const recordId = visit.id ?? visit.visit_id ?? visit.assessment_id ?? '';
 
-        html += `
-            <tr id="record-row-${recordId || index}">
-                <td>${visit.created_at ? new Date(visit.created_at).toLocaleDateString('en-US', {
-                    month:'short', day:'numeric', year:'numeric',
-                    hour:'2-digit', minute:'2-digit'
-                }) : 'N/A'}</td>
-                <td>${visit.symptoms ? (visit.symptoms.substring(0,50) + (visit.symptoms.length > 50 ? '...' : '')) : 'N/A'}</td>
-                <td>${visit.blood_pressure || 'N/A'}</td>
-                <td><span class="badge badge-${riskClass}">${visit.risk_level || 'N/A'}</span></td>
-                <td>${riskScore}${riskScore !== 'N/A' ? '%' : ''}</td>
-                <td>
-                    <button type="button" class="delete-record-btn"
-                            onclick="deleteRecord('${String(recordId).replace(/'/g, "\'")}', this)"
-                            title="Delete this record">
-                        <i class="fas fa-trash-alt"></i> Delete
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
+    visits
+        .slice(0,10)
+        .forEach(
+            (visit,index) => {
 
-    tbody.innerHTML = html;
+
+                const risk =
+                    normalizeRisk(
+                        visit.risk_level
+                    );
+
+
+                const riskStyle =
+                    riskClass(
+                        risk
+                    );
+
+
+                const recordId =
+                    visit.id ??
+                    visit.visit_id ??
+                    visit.assessment_id ??
+                    '';
+
+
+                const date =
+                    visit.created_at
+                    ? formatDate(
+                        visit.created_at
+                    )
+                    : 'N/A';
+
+
+                const symptoms =
+                    visit.symptoms ||
+                    'No symptoms recorded';
+
+
+                const bp =
+                    visit.blood_pressure ||
+                    'Not recorded';
+
+
+                const score =
+                    visit.risk_score ??
+                    visit.risk ??
+                    'N/A';
+
+
+                html += `
+
+                    <div
+                        class="record"
+                        id="record-${recordId || index}"
+                    >
+
+                        <div class="record-top">
+
+                            <span class="record-date">
+                                <i class="far fa-calendar"></i>
+                                ${escapeHtml(date)}
+                            </span>
+
+                            <span
+                                class="record-risk ${riskStyle}"
+                            >
+                                ${escapeHtml(risk)}
+                            </span>
+
+                        </div>
+
+
+                        <div class="record-middle">
+
+                            ${escapeHtml(
+                                String(symptoms)
+                            )}
+
+                        </div>
+
+
+                        <div class="record-bottom">
+
+                            <span>
+                                BP:
+                                ${escapeHtml(
+                                    String(bp)
+                                )}
+                            </span>
+
+                            <span>
+                                Risk score:
+                                ${escapeHtml(
+                                    String(score)
+                                )}
+                            </span>
+
+                            <button
+                                type="button"
+                                class="delete-record-btn"
+                                onclick="deleteRecord(
+                                    '${escapeAttribute(
+                                        String(recordId)
+                                    )}',
+                                    this
+                                )"
+                            >
+
+                                <i class="fas fa-trash"></i>
+                                Delete
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                `;
+
+            }
+        );
+
+
+    container.innerHTML =
+        html;
+
 }
 
-function updateRiskDistribution(visits) {
-    const riskCounts = { 'Low': 0, 'Moderate': 0, 'High': 0, 'Critical': 0 };
-    visits.forEach(visit => {
-        if (visit.risk_level && riskCounts.hasOwnProperty(visit.risk_level)) {
-            riskCounts[visit.risk_level]++;
+
+/* =========================================================
+   ESCAPE HTML
+========================================================= */
+
+function escapeHtml(
+    value
+){
+
+    return String(value)
+        .replace(
+            /&/g,
+            '&amp;'
+        )
+        .replace(
+            /</g,
+            '&lt;'
+        )
+        .replace(
+            />/g,
+            '&gt;'
+        )
+        .replace(
+            /"/g,
+            '&quot;'
+        )
+        .replace(
+            /'/g,
+            '&#039;'
+        );
+
+}
+
+
+function escapeAttribute(
+    value
+){
+
+    return String(value)
+        .replace(
+            /\\/g,
+            '\\\\'
+        )
+        .replace(
+            /'/g,
+            "\\'"
+        );
+
+}
+
+
+/* =========================================================
+   OFFLINE DATABASE
+========================================================= */
+
+const MC_DB_NAME =
+    'MotherCareOfflineDB';
+
+const MC_DB_VERSION =
+    1;
+
+const MC_STORE =
+    'pendingAssessments';
+
+
+function openMotherCareDB(){
+
+    return new Promise(
+        (
+            resolve,
+            reject
+        ) => {
+
+            const request =
+                indexedDB.open(
+                    MC_DB_NAME,
+                    MC_DB_VERSION
+                );
+
+
+            request.onupgradeneeded =
+                event => {
+
+                    const db =
+                        event.target.result;
+
+
+                    if(
+                        !db.objectStoreNames
+                            .contains(
+                                MC_STORE
+                            )
+                    ){
+
+                        db.createObjectStore(
+                            MC_STORE,
+                            {
+                                keyPath:
+                                    'client_id'
+                            }
+                        );
+
+                    }
+
+                };
+
+
+            request.onsuccess =
+                () => {
+
+                    resolve(
+                        request.result
+                    );
+
+                };
+
+
+            request.onerror =
+                () => {
+
+                    reject(
+                        request.error
+                    );
+
+                };
+
         }
-    });
-    
-    const maxCount = Math.max(...Object.values(riskCounts), 1);
-    
-    // Update bars
-    const colors = { 'Low': '#28a745', 'Moderate': '#ffc107', 'High': '#fd7e14', 'Critical': '#dc3545' };
-    Object.keys(riskCounts).forEach(level => {
-        const count = riskCounts[level];
-        const height = (count / maxCount) * 120 + 20;
-        document.getElementById(level.toLowerCase() + 'Bar').style.height = height + 'px';
-        document.getElementById(level.toLowerCase() + 'Count').textContent = count;
-        document.getElementById(level.toLowerCase() + 'Summary').textContent = count + ' visit' + (count !== 1 ? 's' : '');
-    });
-}
-
-
-// ============================================
-// DELETE RECORD UI
-// IMPORTANT: This does not call or alter the database yet.
-// It removes the row from the current dashboard view only.
-// A real database delete endpoint should be added separately.
-// ============================================
-function deleteRecord(recordId, button) {
-    if (recordId === null || recordId === undefined || recordId === 'null') {
-        showToast('This record has no database ID available, so it cannot be deleted yet.', 'error');
-        return;
-    }
-
-    const confirmed = confirm(
-        'Delete this health record from your dashboard?\\n\\n' +
-        'This action should only be used if you are sure you no longer want this record.'
     );
 
-    if (!confirmed) return;
+}
 
-    // UI-only deletion for now. Database deletion is intentionally not attempted.
-    const row = button.closest('tr');
-    if (row) {
-        row.remove();
-        showToast('Record removed from this view.', 'success');
+
+async function getPendingOfflineRecords(){
+
+    const db =
+        await openMotherCareDB();
+
+
+    return new Promise(
+        (
+            resolve,
+            reject
+        ) => {
+
+            const transaction =
+                db.transaction(
+                    MC_STORE,
+                    'readonly'
+                );
+
+
+            const store =
+                transaction.objectStore(
+                    MC_STORE
+                );
+
+
+            const request =
+                store.getAll();
+
+
+            request.onsuccess =
+                () => {
+
+                    resolve(
+                        request.result || []
+                    );
+
+                };
+
+
+            request.onerror =
+                () => {
+
+                    reject(
+                        request.error
+                    );
+
+                };
+
+        }
+    );
+
+}
+
+
+async function removePendingOfflineRecord(
+    clientId
+){
+
+    const db =
+        await openMotherCareDB();
+
+
+    return new Promise(
+        (
+            resolve,
+            reject
+        ) => {
+
+            const transaction =
+                db.transaction(
+                    MC_STORE,
+                    'readwrite'
+                );
+
+
+            transaction
+                .objectStore(
+                    MC_STORE
+                )
+                .delete(
+                    clientId
+                );
+
+
+            transaction.oncomplete =
+                resolve;
+
+
+            transaction.onerror =
+                () => {
+
+                    reject(
+                        transaction.error
+                    );
+
+                };
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   CONNECTION STATUS
+========================================================= */
+
+async function updateConnectionStatus(){
+
+    const pending =
+        await getPendingOfflineRecords()
+            .catch(
+                () => []
+            );
+
+
+    const status =
+        document.getElementById(
+            'syncStatus'
+        );
+
+
+    const statusText =
+        document.getElementById(
+            'syncStatusText'
+        );
+
+
+    const pendingText =
+        document.getElementById(
+            'pendingSync'
+        );
+
+
+    const syncButton =
+        document.getElementById(
+            'syncButton'
+        );
+
+
+    const mainSyncText =
+        document.getElementById(
+            'mainSyncText'
+        );
+
+
+    if(
+        navigator.onLine
+    ){
+
+        status.className =
+            'sync-status';
+
+
+        statusText.textContent =
+            'Online • Connected';
+
+
+        pendingText.textContent =
+            pending.length
+            ? pending.length +
+              ' record(s) waiting to sync.'
+            : 'Your health data is synchronized.';
+
+
+        syncButton.disabled =
+            false;
+
+
+        mainSyncText.textContent =
+            pending.length
+            ? 'Sync waiting health records'
+            : 'Synchronize health records';
+
+    }else{
+
+        status.className =
+            'sync-status offline';
+
+
+        statusText.textContent =
+            'Offline • Working locally';
+
+
+        pendingText.textContent =
+            pending.length
+            ? pending.length +
+              ' record(s) saved offline and waiting to sync.'
+            : 'Offline. New assessments can be saved on this device.';
+
+
+        syncButton.disabled =
+            true;
+
+
+        mainSyncText.textContent =
+            'Offline — records remain safe';
+
     }
+
 }
 
-// ============================================
-// INITIALIZE
-// ============================================
-resetIdleTimer();
-fetchData();
 
-console.log('Health Analytics Dashboard loaded. Session timeout: ' + SESSION_TIMEOUT + ' minutes');
-</script>
+/* =========================================================
+   SYNCHRONIZE
+========================================================= */
 
-<script>
+async function syncNow(
+    silent=false
+){
 
-// ============================================
-// MOTHERCARE OFFLINE DATA + SYNCHRONIZATION
-// ============================================
-const MC_DB_NAME = 'MotherCareOfflineDB';
-const MC_DB_VERSION = 1;
-const MC_STORE = 'pendingAssessments';
+    if(
+        !navigator.onLine
+    ){
 
-function openMotherCareDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(MC_DB_NAME, MC_DB_VERSION);
+        if(!silent){
 
-        request.onupgradeneeded = event => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains(MC_STORE)) {
-                db.createObjectStore(MC_STORE, { keyPath: 'client_id' });
-            }
-        };
+            showToast(
+                'You are offline. Your records remain safe on this device.',
+                'info'
+            );
 
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-}
-
-async function getPendingOfflineRecords() {
-    const db = await openMotherCareDB();
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction(MC_STORE, 'readonly');
-        const store = tx.objectStore(MC_STORE);
-        const req = store.getAll();
-        req.onsuccess = () => resolve(req.result || []);
-        req.onerror = () => reject(req.error);
-    });
-}
-
-async function removePendingOfflineRecord(clientId) {
-    const db = await openMotherCareDB();
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction(MC_STORE, 'readwrite');
-        tx.objectStore(MC_STORE).delete(clientId);
-        tx.oncomplete = resolve;
-        tx.onerror = () => reject(tx.error);
-    });
-}
-
-async function updateConnectionStatus() {
-    const pending = await getPendingOfflineRecords().catch(() => []);
-
-    if (navigator.onLine) {
-        syncStatus.className = 'sync-status';
-        syncStatusText.textContent = 'Online • Connected';
-        pendingSync.innerHTML = pending.length
-            ? `${pending.length} record${pending.length === 1 ? '' : 's'} waiting to sync.`
-            : 'All saved health data is synchronized.';
-        syncButton.disabled = false;
-    } else {
-        syncStatus.className = 'sync-status offline';
-        syncStatusText.textContent = 'Offline • Working locally';
-        pendingSync.innerHTML = pending.length
-            ? `${pending.length} record${pending.length === 1 ? '' : 's'} saved offline and waiting to sync.`
-            : 'Offline. New assessments will be saved on this device.';
-        syncButton.disabled = true;
-    }
-}
-
-async function syncNow(silent = false) {
-    if (!navigator.onLine) {
-        if (!silent) showToast('You are offline. Your records are safe on this device.', 'info');
-        await updateConnectionStatus();
-        return;
-    }
-
-    const pending = await getPendingOfflineRecords().catch(() => []);
-
-    if (!pending.length) {
-        await updateConnectionStatus();
-        if (!silent) showToast('Everything is already synchronized.', 'success');
-        return;
-    }
-
-    syncButton.disabled = true;
-    syncButton.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Syncing...';
-    syncStatusText.textContent = 'Synchronizing...';
-
-    try {
-        const response = await fetch('sync_offline_records.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({records: pending})
-        });
-
-        if (!response.ok) throw new Error('Synchronization server error');
-
-        const result = await response.json();
-
-        if (!result.success && (!result.synced || result.synced.length === 0)) {
-            throw new Error(result.error || 'Synchronization failed');
         }
 
-        for (const item of (result.synced || [])) {
-            if (item.client_id) {
-                await removePendingOfflineRecord(item.client_id);
-            }
-        }
+        await updateConnectionStatus();
+
+        return;
+
+    }
+
+
+    const pending =
+        await getPendingOfflineRecords()
+            .catch(
+                () => []
+            );
+
+
+    if(!pending.length){
 
         await updateConnectionStatus();
+
+
+        if(!silent){
+
+            showToast(
+                'Everything is already synchronized.',
+                'success'
+            );
+
+        }
+
+        return;
+
+    }
+
+
+    const syncButton =
+        document.getElementById(
+            'syncButton'
+        );
+
+
+    const mainSyncButton =
+        document.getElementById(
+            'mainSyncButton'
+        );
+
+
+    syncButton.disabled =
+        true;
+
+
+    syncButton.innerHTML =
+        '<i class="fas fa-sync-alt fa-spin"></i> Syncing';
+
+
+    mainSyncButton.disabled =
+        true;
+
+
+    try{
+
+        const response =
+            await fetch(
+                'sync_offline_records.php',
+                {
+                    method:'POST',
+                    headers:{
+                        'Content-Type':
+                            'application/json'
+                    },
+                    body:
+                        JSON.stringify({
+                            records:
+                                pending
+                        })
+                }
+            );
+
+
+        if(
+            !response.ok
+        ){
+
+            throw new Error(
+                'Synchronization server error'
+            );
+
+        }
+
+
+        const result =
+            await response.json();
+
+
+        if(
+            !result.success &&
+            (
+                !result.synced ||
+                !result.synced.length
+            )
+        ){
+
+            throw new Error(
+                result.error ||
+                'Synchronization failed'
+            );
+
+        }
+
+
+        for(
+            const item of
+            (
+                result.synced ||
+                []
+            )
+        ){
+
+            if(
+                item.client_id
+            ){
+
+                await removePendingOfflineRecord(
+                    item.client_id
+                );
+
+            }
+
+        }
+
+
+        await updateConnectionStatus();
+
         fetchData();
 
-        if (!silent) {
-            const remaining = await getPendingOfflineRecords();
+
+        if(!silent){
+
+            const remaining =
+                await getPendingOfflineRecords();
+
+
             showToast(
                 remaining.length
-                    ? `${remaining.length} record(s) still waiting to sync.`
-                    : 'All offline health records synchronized.',
-                remaining.length ? 'info' : 'success'
+                ? remaining.length +
+                  ' record(s) still waiting to sync.'
+                : 'All offline health records synchronized.',
+                remaining.length
+                ? 'info'
+                : 'success'
             );
+
         }
-    } catch (error) {
-        console.error('Synchronization error:', error);
+
+    }catch(error){
+
+        console.error(
+            'Synchronization error:',
+            error
+        );
+
+
         await updateConnectionStatus();
-        if (!silent) showToast('Synchronization could not complete. Your offline records are still safe.', 'error');
-    } finally {
-        syncButton.disabled = !navigator.onLine;
-        syncButton.innerHTML = '<i class="fas fa-sync-alt"></i> Sync Now';
+
+
+        if(!silent){
+
+            showToast(
+                'Synchronization could not complete. Your offline records are still safe.',
+                'error'
+            );
+
+        }
+
+    }finally{
+
+        syncButton.disabled =
+            !navigator.onLine;
+
+
+        syncButton.innerHTML =
+            '<i class="fas fa-sync-alt"></i> Sync';
+
+
+        mainSyncButton.disabled =
+            false;
+
     }
+
 }
 
-async function deleteRecord(recordId, button) {
-    const row = button.closest('tr');
 
-    // Unsynced local record.
-    if (String(recordId).startsWith('offline:')) {
-        const clientId = String(recordId).substring(8);
-        if (!confirm('Delete this offline health record?')) return;
+/* =========================================================
+   DELETE RECORD
+========================================================= */
 
-        try {
-            await removePendingOfflineRecord(clientId);
-            if (row) row.remove();
+async function deleteRecord(
+    recordId,
+    button
+){
+
+    const record =
+        button.closest(
+            '.record'
+        );
+
+
+    /*
+     * OFFLINE RECORD
+     */
+
+    if(
+        String(
+            recordId
+        ).startsWith(
+            'offline:'
+        )
+    ){
+
+        const clientId =
+            String(
+                recordId
+            ).substring(
+                8
+            );
+
+
+        if(
+            !confirm(
+                'Delete this offline health record?'
+            )
+        ){
+
+            return;
+
+        }
+
+
+        try{
+
+            await removePendingOfflineRecord(
+                clientId
+            );
+
+
+            if(record){
+
+                record.remove();
+
+            }
+
+
             await updateConnectionStatus();
-            showToast('Offline record deleted.', 'success');
-        } catch (error) {
-            showToast('Could not delete the offline record.', 'error');
-        }
-        return;
-    }
 
-    const id = parseInt(recordId, 10);
-    if (!id) {
-        showToast('This record has no valid database ID.', 'error');
-        return;
-    }
 
-    if (!confirm('Delete this health record permanently? This cannot be undone.')) return;
+            showToast(
+                'Offline record deleted.',
+                'success'
+            );
 
-    button.disabled = true;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        }catch(error){
 
-    try {
-        const response = await fetch('delete_symptom_record.php', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({record_id: id})
-        });
+            showToast(
+                'Could not delete the offline record.',
+                'error'
+            );
 
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-            throw new Error(result.error || 'Delete failed');
         }
 
-        if (row) row.remove();
-        showToast('Health record permanently deleted.', 'success');
+
+        return;
+
+    }
+
+
+    const id =
+        parseInt(
+            recordId,
+            10
+        );
+
+
+    if(!id){
+
+        showToast(
+            'This record has no valid database ID.',
+            'error'
+        );
+
+        return;
+
+    }
+
+
+    if(
+        !confirm(
+            'Delete this health record permanently? This cannot be undone.'
+        )
+    ){
+
+        return;
+
+    }
+
+
+    button.disabled =
+        true;
+
+
+    button.innerHTML =
+        '<i class="fas fa-spinner fa-spin"></i>';
+
+
+    try{
+
+        const response =
+            await fetch(
+                'delete_symptom_record.php',
+                {
+                    method:'POST',
+                    headers:{
+                        'Content-Type':
+                            'application/json'
+                    },
+                    body:
+                        JSON.stringify({
+                            record_id:
+                                id
+                        })
+                }
+            );
+
+
+        const result =
+            await response.json();
+
+
+        if(
+            !response.ok ||
+            !result.success
+        ){
+
+            throw new Error(
+                result.error ||
+                'Delete failed'
+            );
+
+        }
+
+
+        if(record){
+
+            record.remove();
+
+        }
+
+
+        showToast(
+            'Health record deleted.',
+            'success'
+        );
+
+
         fetchData();
-    } catch (error) {
-        button.disabled = false;
-        button.innerHTML = '<i class="fas fa-trash-alt"></i> Delete';
-        showToast(error.message || 'Could not delete the record.', 'error');
+
+
+    }catch(error){
+
+        button.disabled =
+            false;
+
+
+        button.innerHTML =
+            '<i class="fas fa-trash"></i> Delete';
+
+
+        showToast(
+            error.message ||
+            'Could not delete the record.',
+            'error'
+        );
+
     }
+
 }
 
-window.addEventListener('online', () => {
-    updateConnectionStatus();
-    syncNow(true);
-});
-window.addEventListener('offline', updateConnectionStatus);
 
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js').catch(err => {
-            console.warn('MotherCare service worker registration failed:', err);
-        });
-    });
+/* =========================================================
+   ONLINE / OFFLINE EVENTS
+========================================================= */
+
+window.addEventListener(
+    'online',
+    () => {
+
+        updateConnectionStatus();
+
+        syncNow(true);
+
+    }
+);
+
+
+window.addEventListener(
+    'offline',
+    () => {
+
+        updateConnectionStatus();
+
+    }
+);
+
+
+/* =========================================================
+   SERVICE WORKER
+========================================================= */
+
+if(
+    'serviceWorker' in navigator
+){
+
+    window.addEventListener(
+        'load',
+        () => {
+
+            navigator.serviceWorker
+                .register(
+                    './service-worker.js'
+                )
+                .catch(
+                    error => {
+
+                        console.warn(
+                            'MotherCare service worker registration failed:',
+                            error
+                        );
+
+                    }
+                );
+
+        }
+    );
+
 }
+
+
+/* =========================================================
+   INITIALIZE
+========================================================= */
+
+resetIdleTimer();
+
+fetchData();
 
 updateConnectionStatus();
+
 </script>
 
 </body>
