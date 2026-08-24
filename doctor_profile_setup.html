@@ -464,16 +464,7 @@ function clearSelectedPhoto(){
 }
 
 function removePhoto(){
-
     clearSelectedPhoto();
-
-    cameraInput.value = '';
-    storageInput.value = '';
-
-    previewImage.src = '';
-    selectedFile.textContent = '';
-
-    photoPreview.classList.remove('show');
 }
 
 function showMessage(text, type){
@@ -545,11 +536,13 @@ form.addEventListener('submit', async function(e){
      */
     formData.delete('camera_photo');
     formData.delete('storage_photo');
-    formData.append(
-        'photo',
-        selectedPhoto,
-        selectedPhoto.name || 'doctor_profile.jpg'
-    );
+    if (selectedPhoto) {
+        formData.append(
+            'photo',
+            selectedPhoto,
+            selectedPhoto.name || 'doctor_profile.jpg'
+        );
+    }
 
     try{
 
