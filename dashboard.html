@@ -337,70 +337,450 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
  // ============================================                                                                                                                                                              
  
                                                                                                                                                                                                          
- function fetchData() {                                                                                                                                                                                       
-     fetch('VisitSummary.php')                                                                                                                                                                                
-         .then(response => response.json())                                                                                                                                                                   
-         .then(data => {                                                                                                                                                                                      
-             if (data.error) {                                                                                                                                                                                
-                 console.error('Error:', data.error);                                                                                                                                                         
-                 return;                                                                                                                                                                                      
-             }                                                                                                                                                                                                
-                                                                                                                                                                                                              
-             // Update user name                                                                                                                                                                              
-             document.getElementById('userName').textContent = data.name?.split(' ')[0] || 'Patient';                                                                                                       
-                                                                                                                                                                                                              
-             // Update stats                                                                                                                                                                                  
-             const totalVisits = data.visits ? data.visits.length : 0;                                                                                                                                        
-             document.getElementById('totalVisits').textContent = totalVisits;                                                                                                                                
-             document.getElementById('totalVisitsCard').textContent = totalVisits;                                                                                                                            
-             document.getElementById('insightTotal').textContent = totalVisits;                                                                                                                               
-             document.getElementById('insightRecords').textContent = totalVisits;                                                                                                                             
-                                                                                                                                                                                                              
-             const latestRisk = data.visits && data.visits.length > 0 ? data.visits[0].risk_level : 'No Data';                                                                                               
-             document.getElementById('latestRisk').textContent = latestRisk;                                                                                                                                  
-             document.getElementById('latestRiskCard').textContent = latestRisk;                                                                                                                              
-             document.getElementById('insightRisk').textContent = latestRisk;                                                                                                                                 
-                                                                                                                                                                                                              
-             // Color the risk                                                                                                                                                                                
-             const riskElement = document.getElementById('latestRiskCard');                                                                                                                                   
-             const riskColors = { 'Low': '#2e7d32', 'Moderate': '#ffc107', 'High': '#fd7e14', 'Critical': '#dc3545' };                                                                                        
-             riskElement.style.color = riskColors[latestRisk] || 'gray';                                                                                                                                    
-                                                                                                                                                                                                              
-             const edd = data.expected_delivery && data.expected_delivery !== 'N/A' ?                                                                                                                       
-                 data.expected_delivery.substring(0, 10) : 'Not Set';                                                                                                                                        
-             document.getElementById('eddDate').textContent = edd;                                                                                                                                            
-             document.getElementById('eddDateCard').textContent = edd;                                                                                                                                        
-                                                                                                                                                                                                              
-             // Calculate average risk                                                                                                                                                                        
-             if (data.visits && data.visits.length > 0) {                                                                                                                                                     
-                 let totalRisk = 0;                                                                                                                                                                           
-                 const riskMap = {'Low': 1, 'Moderate': 2, 'High': 3, 'Critical': 4};                                                                                                                         
-                 data.visits.forEach(visit => {                                                                                                                                                               
-                     totalRisk += riskMap[visit.risk_level] || 0;                                                                                                                                          
-                 });                                                                                                                                                                                          
-                 const avgRisk = (totalRisk / data.visits.length).toFixed(1);                                                                                                                                 
-                 document.getElementById('avgRiskCard').textContent = avgRisk;                                                                                                                                
-                 document.getElementById('insightAvg').textContent = avgRisk + '%';                                                                                                                           
-             }                                                                                                                                                                                                
-                                                                                                                                                                                                              
-             // Update symptoms table                                                                                                                                                                         
-             updateTable(data.visits || []);                                                                                                                                                                
-                                                                                                                                                                                                              
-             // Update risk distribution                                                                                                                                                                      
-             updateRiskDistribution(data.visits || []);                                                                                                                                                     
-         })                                                                                                                                                                                                   
-         .catch(error => {                                                                                                                                                                                    
-             console.error('Error fetching data:', error);                                                                                                                                                    
-             document.getElementById('symptomsTableBody').innerHTML = `                                                                                                                                      
-                 <tr><td colspan="5" style="text-align:center;color:#dc3545;padding:30px;">                                                                                                                
-                     <i class="fas fa-exclamation-circle"></i> Failed to load data                                                                                                                          
-                 </td></tr>                                                                                                                                                                                 
-             `;                                                                                                                                                                                              
-         });                                                                                                                                                                                                  
- }                                                                                                                                                                                                            
  
-                                                                                                                                                                                                         
- function updateTable(visits) {
+/* =========================================================
+   DATABASE DATA RETRIEVAL
+   Only this section handles dashboard data.
+   ========================================================= */
+
+function setDashboardText(id, value) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.textContent = value;
+    }
+}
+
+function normalizeDashboardRisk(value) {
+    const raw = String(value ?? '').trim().toLowerCase();
+
+    if (!raw || raw === 'n/a' || raw === 'no data') {
+        return 'No Data';
+    }
+
+    if (raw === 'green' || raw === 'low' || raw === 'low risk') {
+        return 'Low';
+    }
+
+    if (
+        raw === 'yellow' ||
+        raw === 'moderate' ||
+        raw === 'medium' ||
+        raw === 'moderate risk'
+    ) {
+        return 'Moderate';
+    }
+
+    if (raw === 'orange' || raw === 'high' || raw === 'high risk') {
+        return 'High';
+    }
+
+    if (raw === 'red' || raw === 'critical' || raw === 'critical risk') {
+        return 'Critical';
+    }
+
+    return String(value);
+}
+
+function parseDashboardDate(value) {
+    if (!value || value === 'N/A') return null;
+
+    const raw = String(value).trim();
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+    if (match) {
+        const date = new Date(
+            Number(match[1]),
+            Number(match[2]) - 1,
+            Number(match[3])
+        );
+
+        if (!isNaN(date.getTime())) return date;
+    }
+
+    const date = new Date(raw);
+    return isNaN(date.getTime()) ? null : date;
+}
+
+function formatDashboardDate(value) {
+    const date = parseDashboardDate(value);
+
+    if (!date) return 'Not Set';
+
+    return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    });
+}
+
+function fetchData() {
+
+    /*
+     * VisitSummary.php = assessment records.
+     * get_user_profile.php = logged-in user's profile,
+     * including last_period and expected_delivery.
+     *
+     * Promise.allSettled prevents a profile problem from
+     * stopping the health-assessment records from displaying.
+     */
+    Promise.allSettled([
+
+        fetch(
+            'VisitSummary.php?_=' + Date.now(),
+            {
+                cache: 'no-store',
+                credentials: 'same-origin'
+            }
+        ).then(async response => {
+
+            if (!response.ok) {
+                throw new Error(
+                    'VisitSummary.php returned HTTP ' +
+                    response.status
+                );
+            }
+
+            const text = await response.text();
+
+            try {
+                return JSON.parse(text);
+            } catch (error) {
+                console.error(
+                    'VisitSummary.php returned:',
+                    text.substring(0, 500)
+                );
+                throw new Error(
+                    'VisitSummary.php did not return valid JSON.'
+                );
+            }
+        }),
+
+        fetch(
+            'get_user_profile.php?_=' + Date.now(),
+            {
+                cache: 'no-store',
+                credentials: 'same-origin'
+            }
+        ).then(async response => {
+
+            if (!response.ok) {
+                throw new Error(
+                    'get_user_profile.php returned HTTP ' +
+                    response.status
+                );
+            }
+
+            return response.json();
+        })
+
+    ]).then(results => {
+
+        const visitResult = results[0];
+        const profileResult = results[1];
+
+        const data =
+            visitResult.status === 'fulfilled'
+                ? (visitResult.value || {})
+                : {};
+
+        const profileData =
+            profileResult.status === 'fulfilled'
+                ? (profileResult.value || {})
+                : {};
+
+        if (visitResult.status === 'rejected') {
+            console.error(
+                'VisitSummary.php error:',
+                visitResult.reason
+            );
+        }
+
+        if (profileResult.status === 'rejected') {
+            console.warn(
+                'get_user_profile.php error:',
+                profileResult.reason
+            );
+        }
+
+        /*
+         * USER NAME
+         */
+        const profileName = [
+            profileData.firstname,
+            profileData.lastname
+        ].filter(Boolean).join(' ').trim();
+
+        const fullName =
+            profileName ||
+            data.name ||
+            data.full_name ||
+            'Patient';
+
+        setDashboardText(
+            'userName',
+            fullName.split(/\s+/)[0] || 'Patient'
+        );
+
+        /*
+         * VISITS
+         */
+        let visits = [];
+
+        if (Array.isArray(data.visits)) {
+            visits = data.visits;
+        } else if (Array.isArray(data.records)) {
+            visits = data.records;
+        } else if (Array.isArray(data.assessments)) {
+            visits = data.assessments;
+        }
+
+        /*
+         * Normalize database risk labels.
+         * Your database can contain Green/Yellow/Orange/Red,
+         * while the dashboard uses Low/Moderate/High/Critical.
+         */
+        visits = visits.map(visit => ({
+            ...visit,
+            risk_level: normalizeDashboardRisk(
+                visit.risk_level ??
+                visit.level ??
+                visit.riskLevel
+            )
+        }));
+
+        /*
+         * Make newest assessment first.
+         */
+        visits.sort((a, b) => {
+
+            const dateA = parseDashboardDate(
+                a.created_at ||
+                a.submitted_at ||
+                a.date
+            );
+
+            const dateB = parseDashboardDate(
+                b.created_at ||
+                b.submitted_at ||
+                b.date
+            );
+
+            if (!dateA && !dateB) return 0;
+            if (!dateA) return 1;
+            if (!dateB) return -1;
+
+            return dateB - dateA;
+        });
+
+        const totalVisits = visits.length;
+
+        /*
+         * TOP SUMMARY
+         *
+         * setDashboardText() safely ignores IDs that are not
+         * present in the current mockup.
+         */
+        setDashboardText('totalVisitsCard', totalVisits);
+        setDashboardText('totalVisits', totalVisits);
+        setDashboardText('insightTotal', totalVisits);
+        setDashboardText('insightRecords', totalVisits);
+
+        /*
+         * LATEST RISK
+         */
+        const latestRisk =
+            totalVisits > 0
+                ? normalizeDashboardRisk(
+                    visits[0].risk_level
+                )
+                : 'No Data';
+
+        setDashboardText('latestRiskCard', latestRisk);
+        setDashboardText('latestRisk', latestRisk);
+        setDashboardText('insightRisk', latestRisk);
+
+        const riskColors = {
+            Low: '#2e7d32',
+            Moderate: '#ffc107',
+            High: '#fd7e14',
+            Critical: '#dc3545'
+        };
+
+        const riskElement =
+            document.getElementById('latestRiskCard');
+
+        if (riskElement) {
+            riskElement.style.color =
+                riskColors[latestRisk] || '#6c757d';
+        }
+
+        /*
+         * AVERAGE RISK LEVEL
+         */
+        const riskMap = {
+            Low: 1,
+            Moderate: 2,
+            High: 3,
+            Critical: 4
+        };
+
+        let totalRisk = 0;
+        let riskCount = 0;
+
+        visits.forEach(visit => {
+
+            const level =
+                normalizeDashboardRisk(
+                    visit.risk_level
+                );
+
+            if (riskMap[level]) {
+                totalRisk += riskMap[level];
+                riskCount++;
+            }
+        });
+
+        if (riskCount > 0) {
+
+            const average =
+                (totalRisk / riskCount).toFixed(1);
+
+            setDashboardText(
+                'avgRiskCard',
+                average
+            );
+
+            setDashboardText(
+                'insightAvg',
+                average
+            );
+
+        } else {
+
+            setDashboardText(
+                'avgRiskCard',
+                'No Data'
+            );
+
+            setDashboardText(
+                'insightAvg',
+                'No Data'
+            );
+        }
+
+        /*
+         * PREGNANCY PROFILE
+         */
+        const profile =
+            profileData.profile ||
+            data.profile ||
+            data.user_profile ||
+            data.userProfile ||
+            {};
+
+        const lastPeriod =
+            profile.last_period ||
+            data.last_period ||
+            data.last_menstrual_period ||
+            data.lmp ||
+            null;
+
+        let expectedDelivery =
+            profile.expected_delivery ||
+            data.expected_delivery ||
+            data.expectedDelivery ||
+            data.edd ||
+            data.due_date ||
+            null;
+
+        /*
+         * Calculate EDD from LMP if it is not already
+         * available in the database response.
+         */
+        if (!expectedDelivery && lastPeriod) {
+
+            const lmp =
+                parseDashboardDate(lastPeriod);
+
+            if (lmp) {
+
+                const edd =
+                    new Date(lmp);
+
+                edd.setDate(
+                    edd.getDate() + 280
+                );
+
+                expectedDelivery =
+                    edd.toISOString()
+                       .substring(0, 10);
+            }
+        }
+
+        const formattedEDD =
+            formatDashboardDate(
+                expectedDelivery
+            );
+
+        setDashboardText(
+            'eddDate',
+            formattedEDD
+        );
+
+        setDashboardText(
+            'eddDateCard',
+            formattedEDD
+        );
+
+        /*
+         * SEND DATA TO THE EXISTING DASHBOARD DISPLAY.
+         */
+        updateTable(visits);
+        updateRiskDistribution(visits);
+
+        console.log(
+            'MotherCare data loaded successfully:',
+            {
+                user: fullName,
+                totalVisits: totalVisits,
+                latestRisk: latestRisk,
+                expectedDelivery: expectedDelivery
+            }
+        );
+
+    }).catch(error => {
+
+        console.error(
+            'MotherCare dashboard retrieval error:',
+            error
+        );
+
+        const table =
+            document.getElementById(
+                'symptomsTableBody'
+            );
+
+        if (table) {
+            table.innerHTML = `
+                <tr>
+                    <td
+                        colspan="6"
+                        style="
+                            text-align:center;
+                            color:#dc3545;
+                            padding:30px;
+                        "
+                    >
+                        <i class="fas fa-exclamation-circle"></i>
+                        Unable to load health records
+                    </td>
+                </tr>
+            `;
+        }
+    });
+}
+
+function updateTable(visits) {
     const tbody = document.getElementById('symptomsTableBody');
 
     if (!visits || visits.length === 0) {
@@ -418,7 +798,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     let html = '';
 
     visits.slice(0, 10).forEach(visit => {
-        const riskClass = (visit.risk_level || 'low').toLowerCase();
+        const riskClass = normalizeDashboardRisk(visit.risk_level || 'Low').toLowerCase();
         const recordJson = JSON.stringify(visit)
             .replace(/\\/g, '\\\\')
             .replace(/'/g, "\\'");
@@ -431,7 +811,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
                 }) : 'N/A'}</td>
                 <td>${visit.symptoms ? (visit.symptoms.substring(0, 50) + (visit.symptoms.length > 50 ? '...' : '')) : 'N/A'}</td>
                 <td>${visit.blood_pressure || 'N/A'}</td>
-                <td><span class="badge badge-${riskClass}">${visit.risk_level || 'N/A'}</span></td>
+                <td><span class="badge badge-${riskClass}">${normalizeDashboardRisk(visit.risk_level || 'N/A')}</span></td>
                 <td>${visit.risk || 'N/A'}%</td>
                 <td>
                     <button type="button" class="delete-record-btn"
@@ -478,29 +858,68 @@ function deleteVisitRecord(visit) {
     });
 }
 
-function updateRiskDistribution(visits) {                                                                                                                                                                    
-     const riskCounts = { 'Low': 0, 'Moderate': 0, 'High': 0, 'Critical': 0 };                                                                                                                                
-     visits.forEach(visit => {                                                                                                                                                                                
-         if (visit.risk_level && riskCounts.hasOwnProperty(visit.risk_level)) {                                                                                                                             
-             riskCounts[visit.risk_level]++;                                                                                                                                                                 
-         }                                                                                                                                                                                                    
-     });                                                                                                                                                                                                      
-                                                                                                                                                                                                              
-     const maxCount = Math.max(...Object.values(riskCounts), 1);                                                                                                                                              
-                                                                                                                                                                                                              
-     // Update bars                                                                                                                                                                                           
-     const colors = { 'Low': '#28a745', 'Moderate': '#ffc107', 'High': '#fd7e14', 'Critical': '#dc3545' };                                                                                                    
-     Object.keys(riskCounts).forEach(level => {                                                                                                                                                               
-         const count = riskCounts[level];                                                                                                                                                                     
-         const height = (count / maxCount) * 120 + 20;                                                                                                                                                       
-         document.getElementById(level.toLowerCase() + 'Bar').style.height = height + 'px';                                                                                                                   
-         document.getElementById(level.toLowerCase() + 'Count').textContent = count;                                                                                                                          
-         document.getElementById(level.toLowerCase() + 'Summary').textContent = count + ' visit' + (count !== 1 ? 's' : '');                                                                                  
-     });                                                                                                                                                                                                      
- }                                                                                                                                                                                                            
- 
-                                                                                                                                                                                                         
- // ============================================                                                                                                                                                              
+
+function updateRiskDistribution(visits) {
+
+    const riskCounts = {
+        Low: 0,
+        Moderate: 0,
+        High: 0,
+        Critical: 0
+    };
+
+    (visits || []).forEach(visit => {
+
+        const level =
+            normalizeDashboardRisk(
+                visit.risk_level
+            );
+
+        if (
+            Object.prototype.hasOwnProperty.call(
+                riskCounts,
+                level
+            )
+        ) {
+            riskCounts[level]++;
+        }
+    });
+
+    const maxCount =
+        Math.max(
+            ...Object.values(riskCounts),
+            1
+        );
+
+    Object.keys(riskCounts).forEach(level => {
+
+        const count =
+            riskCounts[level];
+
+        const bar =
+            document.getElementById(
+                level.toLowerCase() + 'Bar'
+            );
+
+        const countElement =
+            document.getElementById(
+                level.toLowerCase() + 'Count'
+            );
+
+        if (bar) {
+            bar.style.height =
+                ((count / maxCount) * 120 + 20) +
+                'px';
+        }
+
+        if (countElement) {
+            countElement.textContent =
+                count;
+        }
+    });
+}
+
+// ============================================                                                                                                                                                              
  // INITIALIZE                                                                                                                                                                                                
  // ============================================                                                                                                                                                              
  resetIdleTimer();                                                                                                                                                                                            
