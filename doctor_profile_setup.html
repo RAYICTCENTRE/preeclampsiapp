@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, user-scalable=yes"
+    >
+
     <title>Doctor Profile - MotherCare</title>
+
     <style>
         * {
             margin: 0;
@@ -12,8 +17,19 @@
         }
 
         body {
-            background: linear-gradient(135deg, #fff5e8 0%, #ffe8d4 100%);
-            font-family: 'Segoe UI', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(
+                135deg,
+                #fff5e8 0%,
+                #ffe8d4 100%
+            );
+
+            font-family:
+                'Segoe UI',
+                'Inter',
+                -apple-system,
+                BlinkMacSystemFont,
+                sans-serif;
+
             min-height: 100vh;
             padding: 40px 20px;
         }
@@ -22,10 +38,15 @@
             max-width: 600px;
             width: 100%;
             margin: 0 auto;
+
             background: white;
             border-radius: 32px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+
+            box-shadow:
+                0 20px 40px rgba(0,0,0,0.08);
+
             overflow: hidden;
+
             animation: fadeInUp 0.5s ease;
         }
 
@@ -34,14 +55,25 @@
                 opacity: 0;
                 transform: translateY(20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
 
+        /* =====================================================
+           HEADER
+        ===================================================== */
+
         .header {
-            background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%);
+            background:
+                linear-gradient(
+                    135deg,
+                    #e67e22 0%,
+                    #f39c12 100%
+                );
+
             padding: 28px 32px;
             text-align: center;
         }
@@ -57,6 +89,10 @@
             font-size: 14px;
             color: rgba(255,255,255,0.9);
         }
+
+        /* =====================================================
+           FORM
+        ===================================================== */
 
         .form-content {
             padding: 32px;
@@ -74,22 +110,28 @@
             font-size: 14px;
         }
 
-        .form-group label .required {
+        .required {
             color: #e74c3c;
             margin-left: 3px;
         }
 
         input[type="text"],
-        input[type="tel"],
         select,
         textarea {
             width: 100%;
             padding: 12px 16px;
-            border: 2px solid #e2e8f0;
+
+            border:
+                2px solid #e2e8f0;
+
             border-radius: 12px;
+
             font-size: 14px;
             font-family: inherit;
-            transition: all 0.3s ease;
+
+            transition:
+                all 0.3s ease;
+
             background: #fefcf8;
         }
 
@@ -97,75 +139,168 @@
         select:focus,
         textarea:focus {
             outline: none;
-            border-color: #e67e22;
-            box-shadow: 0 0 0 3px rgba(230,126,34,0.1);
+
+            border-color:
+                #e67e22;
+
+            box-shadow:
+                0 0 0 3px
+                rgba(230,126,34,0.1);
+
             background: white;
         }
 
         textarea {
             resize: vertical;
-            min-height: 80px;
+            min-height: 100px;
         }
 
-        /* Phone Row */
-        .phone-row {
-            display: flex;
-            gap: 12px;
-        }
+        /* =====================================================
+           PHOTO UPLOAD
+        ===================================================== */
 
-        .phone-row select {
-            width: 35%;
-        }
-
-        .phone-row input {
-            width: 65%;
-        }
-
-        /* File Upload */
         .file-upload {
-            border: 2px dashed #e2e8f0;
-            border-radius: 12px;
-            padding: 20px;
+            border:
+                2px dashed #e2e8f0;
+
+            border-radius: 16px;
+
+            padding: 25px 20px;
+
             text-align: center;
+
             cursor: pointer;
-            transition: all 0.3s;
-            background: #fefcf8;
+
+            transition:
+                all 0.3s ease;
+
+            background:
+                #fefcf8;
+
+            position: relative;
         }
 
         .file-upload:hover {
-            border-color: #e67e22;
-            background: #fff5e8;
+            border-color:
+                #e67e22;
+
+            background:
+                #fff5e8;
+        }
+
+        .file-upload.dragover {
+            border-color:
+                #e67e22;
+
+            background:
+                #fff0dc;
+
+            transform:
+                scale(1.01);
         }
 
         .file-upload input {
             display: none;
         }
 
-        .file-upload-label {
-            cursor: pointer;
-            color: #e67e22;
-            font-weight: 600;
+        .upload-icon {
+            font-size: 42px;
+            margin-bottom: 10px;
         }
 
+        .file-upload-label {
+            cursor: pointer;
+
+            color:
+                #e67e22;
+
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .upload-help {
+            font-size: 12px;
+
+            color: #999;
+
+            margin-top: 8px;
+
+            line-height: 1.5;
+        }
+
+        .selected-file {
+            margin-top: 10px;
+
+            font-size: 12px;
+
+            color: #64748b;
+
+            word-break: break-word;
+        }
+
+        /* =====================================================
+           PHOTO PREVIEW
+        ===================================================== */
+
         .photo-preview {
-            margin-top: 15px;
+            margin-top: 18px;
+
             text-align: center;
+
+            display: none;
+        }
+
+        .photo-preview.show {
+            display: block;
         }
 
         .photo-preview img {
-            max-width: 120px;
-            max-height: 120px;
-            border-radius: 60px;
+            width: 130px;
+            height: 130px;
+
+            border-radius: 50%;
+
             object-fit: cover;
-            border: 3px solid #e67e22;
+
+            border:
+                4px solid #e67e22;
+
+            box-shadow:
+                0 5px 15px
+                rgba(230,126,34,0.2);
         }
 
-        /* Message */
+        .remove-photo {
+            display: block;
+
+            margin: 10px auto 0;
+
+            border: none;
+
+            background: none;
+
+            color: #dc2626;
+
+            font-size: 13px;
+
+            font-weight: 600;
+
+            cursor: pointer;
+        }
+
+        /* =====================================================
+           MESSAGE
+        ===================================================== */
+
         .message {
             padding: 12px;
+
             border-radius: 10px;
+
             margin-bottom: 20px;
+
             font-size: 14px;
+
             display: none;
         }
 
@@ -181,171 +316,942 @@
             display: block;
         }
 
-        /* Buttons */
+        .message.loading {
+            background: #fff7ed;
+            color: #c2410c;
+            display: block;
+        }
+
+        /* =====================================================
+           ACTION BUTTONS
+        ===================================================== */
+
         .button-group {
             display: flex;
-            gap: 12px;
-            margin-top: 24px;
+
+            flex-direction: row;
+
+            gap: 14px;
+
+            margin-top: 30px;
+
+            width: 100%;
         }
 
         .btn {
             flex: 1;
-            padding: 12px 20px;
+
+            min-width: 0;
+
+            padding: 14px 20px;
+
             border: none;
+
             border-radius: 12px;
+
             font-size: 16px;
-            font-weight: 600;
+
+            font-weight: 700;
+
             font-family: inherit;
+
             cursor: pointer;
-            transition: all 0.3s ease;
+
+            transition:
+                all 0.25s ease;
+
             text-align: center;
-            text-decoration: none;
-            display: inline-block;
-        }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%);
-            color: white;
-            box-shadow: 0 4px 12px rgba(230,126,34,0.3);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(230,126,34,0.4);
-        }
-
-        .btn-secondary {
-            background: #f1f5f9;
-            color: #64748b;
-        }
-
-        .btn-secondary:hover {
-            background: #e2e8f0;
-            transform: translateY(-2px);
-        }
-
-        .link-buttons {
             display: flex;
-            gap: 16px;
+
+            align-items: center;
+
             justify-content: center;
-            margin-top: 24px;
-            padding-top: 20px;
-            border-top: 1px solid #e2e8f0;
+
+            gap: 8px;
         }
 
-        .link-buttons a {
-            color: #e67e22;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 14px;
+        /* =====================================================
+           CANCEL BUTTON - RED
+        ===================================================== */
+
+        .btn-cancel {
+            background: #dc3545;
+
+            color: white;
+
+            box-shadow:
+                0 4px 12px
+                rgba(220,53,69,0.25);
         }
 
-        .link-buttons a:hover {
-            text-decoration: underline;
+        .btn-cancel:hover {
+            background: #bb2d3b;
+
+            transform:
+                translateY(-2px);
+
+            box-shadow:
+                0 6px 16px
+                rgba(220,53,69,0.30);
         }
+
+        /* =====================================================
+           SAVE BUTTON - ORANGE
+        ===================================================== */
+
+        .btn-save {
+            background:
+                linear-gradient(
+                    135deg,
+                    #e67e22 0%,
+                    #f39c12 100%
+                );
+
+            color: white;
+
+            box-shadow:
+                0 4px 12px
+                rgba(230,126,34,0.30);
+        }
+
+        .btn-save:hover {
+            transform:
+                translateY(-2px);
+
+            box-shadow:
+                0 6px 16px
+                rgba(230,126,34,0.40);
+        }
+
+        .btn-save:disabled {
+            opacity: 0.65;
+
+            cursor: not-allowed;
+
+            transform: none;
+        }
+
+        /* =====================================================
+           MOBILE
+        ===================================================== */
 
         @media (max-width: 640px) {
+
+            body {
+                padding:
+                    20px 12px;
+            }
+
             .profile-container {
-                border-radius: 24px;
+                border-radius:
+                    24px;
             }
-            
+
             .header {
-                padding: 24px 20px;
+                padding:
+                    24px 20px;
             }
-            
+
             .header h1 {
-                font-size: 24px;
+                font-size:
+                    24px;
             }
-            
+
             .form-content {
-                padding: 24px;
+                padding:
+                    24px 20px;
             }
-            
-            .phone-row {
-                flex-direction: column;
-                gap: 8px;
-            }
-            
-            .phone-row select,
-            .phone-row input {
-                width: 100%;
-            }
-            
+
+            /*
+             * Keep buttons in ONE ROW on phone.
+             */
+
             .button-group {
-                flex-direction: column;
+                flex-direction:
+                    row;
+
+                gap:
+                    10px;
             }
-            
-            .link-buttons {
-                flex-direction: column;
-                align-items: center;
-                gap: 10px;
+
+            .btn {
+                padding:
+                    14px 8px;
+
+                font-size:
+                    14px;
             }
         }
+
+        /* Very small phones */
+
+        @media (max-width: 360px) {
+
+            .form-content {
+                padding:
+                    20px 15px;
+            }
+
+            .button-group {
+                gap: 8px;
+            }
+
+            .btn {
+                font-size:
+                    13px;
+
+                padding:
+                    13px 6px;
+            }
+        }
+
     </style>
 </head>
+
 <body>
 
 <div class="profile-container">
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
     <div class="header">
-        <h1>Doctor Profile</h1>
-        <p>Complete your professional details</p>
+
+        <h1>
+            Doctor Profile
+        </h1>
+
+        <p>
+            Complete your professional details
+        </p>
+
     </div>
 
+
     <div class="form-content">
-        <!-- System Response Messages Block -->
-        <div id="message" class="message"></div>
 
-        <form id="profileForm" enctype="multipart/form-data">
-            <!-- Profile Photo Upload Field -->
+        <!-- SYSTEM MESSAGE -->
+
+        <div
+            id="message"
+            class="message">
+        </div>
+
+
+        <!-- =================================================
+             PROFILE FORM
+        ================================================== -->
+
+        <form
+            id="profileForm"
+            action="doctor_profile_setup.php"
+            method="POST"
+            enctype="multipart/form-data">
+
+
+            <!-- =================================================
+                 PROFILE PHOTO
+            ================================================== -->
+
             <div class="form-group">
-                <label>Profile Photo <span class="required">*</span></label>
-                <div class="file-upload" onclick="document.getElementById('photoInput').click()">
-                    <input type="file" name="photo" id="photoInput" accept="image/*" style="display:none;" onchange="previewPhoto(this)" required>
+
+                <label>
+                    Profile Photo
+                    <span class="required">*</span>
+                </label>
+
+
+                <div
+                    class="file-upload"
+                    id="fileUploadArea"
+                    onclick="openFilePicker()"
+                >
+
+                    <input
+                        type="file"
+                        name="photo"
+                        id="photoInput"
+                        accept="image/jpeg,image/png,image/webp,image/jpg"
+                        onchange="previewPhoto(this)"
+                        required
+                    >
+
+
+                    <div class="upload-icon">
+                        📸
+                    </div>
+
+
                     <div class="file-upload-label">
-                        📸 Click to upload or drag photo here
+                        Tap to choose your photo
                     </div>
-                    <div style="font-size:12px; color:#999; margin-top:8px;">
-                        Recommended: Square image, max 2MB
+
+
+                    <div class="upload-help">
+
+                        On your phone, this opens
+                        Gallery/Photos/Files.<br>
+
+                        On a computer, browse to the
+                        photo location or drag it here.
+
+                        <br>
+
+                        JPG, PNG or WebP • Maximum 2MB
+
                     </div>
+
+
+                    <div
+                        class="selected-file"
+                        id="selectedFile">
+                    </div>
+
                 </div>
-                <div class="photo-preview" id="photoPreview"></div>
+
+
+                <!-- PHOTO PREVIEW -->
+
+                <div
+                    class="photo-preview"
+                    id="photoPreview">
+
+                    <img
+                        id="previewImage"
+                        src=""
+                        alt="Profile preview"
+                    >
+
+                    <button
+                        type="button"
+                        class="remove-photo"
+                        onclick="removePhoto(event)"
+                    >
+                        Remove photo
+                    </button>
+
+                </div>
+
             </div>
 
-            <!-- Specialty Selection Dropdown -->
+
+            <!-- =================================================
+                 SPECIALTY
+            ================================================== -->
+
             <div class="form-group">
-                <label>Specialty Focus <span class="required">*</span></label>
-                <select name="specialty" required>
-                    <option value="">Select your specialty</option>
-                    <option value="Obstetrician">Obstetrician</option>
-                    <option value="Gynecologist">Gynecologist</option>
-                    <option value="General Practitioner">General Practitioner</option>
-                    <option value="Midwife">Midwife</option>
-                    <option value="Maternal Health Specialist">Maternal Health Specialist</option>
+
+                <label>
+                    Specialty Focus
+                    <span class="required">*</span>
+                </label>
+
+                <select
+                    name="specialty"
+                    required
+                >
+
+                    <option value="">
+                        Select your specialty
+                    </option>
+
+                    <option value="Obstetrician">
+                        Obstetrician
+                    </option>
+
+                    <option value="Gynecologist">
+                        Gynecologist
+                    </option>
+
+                    <option value="General Practitioner">
+                        General Practitioner
+                    </option>
+
+                    <option value="Midwife">
+                        Midwife
+                    </option>
+
+                    <option value="Maternal Health Specialist">
+                        Maternal Health Specialist
+                    </option>
+
                 </select>
+
             </div>
 
-            <!-- Hospital Facility Input Field -->
+
+            <!-- =================================================
+                 MEDICAL FACILITY
+            ================================================== -->
+
             <div class="form-group">
-                <label>Medical Facility / Hospital <span class="required">*</span></label>
-                <input type="text" name="facility" placeholder="e.g., Mulago Hospital" required>
+
+                <label>
+                    Medical Facility / Hospital
+                    <span class="required">*</span>
+                </label>
+
+                <input
+                    type="text"
+                    name="facility"
+                    placeholder="e.g., Mulago Hospital"
+                    required
+                >
+
             </div>
 
-            <!-- Professional Qualifications Field -->
+
+            <!-- =================================================
+                 QUALIFICATIONS
+            ================================================== -->
+
             <div class="form-group">
-                <label>Qualifications & Background <span class="required">*</span></label>
-                <textarea name="qualifications" placeholder="e.g., MBChB, MMed in Obstetrics and Gynecology" required></textarea>
+
+                <label>
+                    Qualifications & Background
+                    <span class="required">*</span>
+                </label>
+
+                <textarea
+                    name="qualifications"
+                    placeholder="e.g., MBChB, MMed in Obstetrics and Gynecology"
+                    required
+                ></textarea>
+
             </div>
 
-            <!-- Contact Information Input Row -->
-            <div class="form-group">
-                <label>Phone Number <span class="required">*</span></label>
-                <div class="phone-row">
-                    <select name="countryCode" id="countryCode" required>
-                        <option value="+256">🇺🇬 Uganda (+256)</option>
-                        <option value="+254">🇰🇪 Kenya (+254)</option>
-                        <option value="+255">🇹🇿 Tanzania (+255)</option>
-                    </select>
-                    <input type="tel" name="dContact" placeholder="712345678" pattern="[0-9]{9,10}" title="Please enter a valid phone number (9-10 digits without country code)" required>
-                </div>
+
+            <!-- =================================================
+                 ACTION BUTTONS
+            ================================================== -->
+
+            <div class="button-group">
+
+                <!-- CANCEL -->
+
+                <button
+                    type="button"
+                    class="btn btn-cancel"
+                    id="cancelBtn"
+                    onclick="cancelProfile()"
+                >
+                    ✕ &nbsp; Cancel
+                </button>
+
+
+                <!-- SAVE -->
+
+                <button
+                    type="submit"
+                    class="btn btn-save"
+                    id="saveBtn"
+                >
+                    ✓ &nbsp; Save Profile
+                </button>
+
             </div>
 
+        </form>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* =============================================================
+   ELEMENTS
+============================================================= */
+
+const form =
+    document.getElementById(
+        'profileForm'
+    );
+
+const photoInput =
+    document.getElementById(
+        'photoInput'
+    );
+
+const photoPreview =
+    document.getElementById(
+        'photoPreview'
+    );
+
+const previewImage =
+    document.getElementById(
+        'previewImage'
+    );
+
+const selectedFile =
+    document.getElementById(
+        'selectedFile'
+    );
+
+const message =
+    document.getElementById(
+        'message'
+    );
+
+const fileUploadArea =
+    document.getElementById(
+        'fileUploadArea'
+    );
+
+const saveBtn =
+    document.getElementById(
+        'saveBtn'
+    );
+
+
+/* =============================================================
+   OPEN FILE BROWSER
+============================================================= */
+
+function openFilePicker() {
+
+    photoInput.click();
+
+}
+
+
+/* =============================================================
+   PHOTO PREVIEW
+============================================================= */
+
+function previewPhoto(input) {
+
+    if (
+        !input.files ||
+        !input.files.length
+    ) {
+        return;
+    }
+
+
+    const file =
+        input.files[0];
+
+
+    /* Allowed image formats */
+
+    const allowedTypes = [
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/webp'
+    ];
+
+
+    if (
+        !allowedTypes.includes(
+            file.type
+        )
+    ) {
+
+        showMessage(
+            'Please select a JPG, PNG or WebP image.',
+            'error'
+        );
+
+        input.value = '';
+
+        return;
+    }
+
+
+    /* Maximum 2MB */
+
+    const maxSize =
+        2 * 1024 * 1024;
+
+
+    if (
+        file.size > maxSize
+    ) {
+
+        showMessage(
+            'The photo is larger than 2MB. Please choose a smaller image.',
+            'error'
+        );
+
+        input.value = '';
+
+        return;
+    }
+
+
+    selectedFile.textContent =
+        'Selected: ' + file.name;
+
+
+    const reader =
+        new FileReader();
+
+
+    reader.onload =
+        function(event) {
+
+            previewImage.src =
+                event.target.result;
+
+            photoPreview.classList.add(
+                'show'
+            );
+
+        };
+
+
+    reader.readAsDataURL(file);
+
+
+    clearMessage();
+
+}
+
+
+/* =============================================================
+   REMOVE PHOTO
+============================================================= */
+
+function removePhoto(event) {
+
+    event.stopPropagation();
+
+    photoInput.value = '';
+
+    previewImage.src = '';
+
+    selectedFile.textContent = '';
+
+    photoPreview.classList.remove(
+        'show'
+    );
+
+}
+
+
+/* =============================================================
+   DRAG & DROP
+============================================================= */
+
+fileUploadArea.addEventListener(
+    'dragover',
+    function(event) {
+
+        event.preventDefault();
+
+        fileUploadArea.classList.add(
+            'dragover'
+        );
+
+    }
+);
+
+
+fileUploadArea.addEventListener(
+    'dragleave',
+    function(event) {
+
+        event.preventDefault();
+
+        fileUploadArea.classList.remove(
+            'dragover'
+        );
+
+    }
+);
+
+
+fileUploadArea.addEventListener(
+    'drop',
+    function(event) {
+
+        event.preventDefault();
+
+        fileUploadArea.classList.remove(
+            'dragover'
+        );
+
+
+        const files =
+            event.dataTransfer.files;
+
+
+        if (
+            files &&
+            files.length
+        ) {
+
+            photoInput.files =
+                files;
+
+            previewPhoto(
+                photoInput
+            );
+
+        }
+
+    }
+);
+
+
+/* =============================================================
+   CANCEL
+   Logout then return to screen2.html
+============================================================= */
+
+function cancelProfile() {
+
+    const confirmed =
+        confirm(
+            'Cancel profile setup and return to the login page?'
+        );
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    fetch(
+        'logout.php',
+        {
+            method: 'GET',
+            credentials: 'same-origin'
+        }
+    )
+    .finally(
+        function() {
+
+            window.location.href =
+                'screen2.html';
+
+        }
+    );
+
+}
+
+
+/* =============================================================
+   SAVE PROFILE
+============================================================= */
+
+form.addEventListener(
+    'submit',
+    async function(event) {
+
+        event.preventDefault();
+
+
+        /* Validate form */
+
+        if (
+            !form.checkValidity()
+        ) {
+
+            form.reportValidity();
+
+            return;
+
+        }
+
+
+        /* Validate photo */
+
+        if (
+            !photoInput.files ||
+            !photoInput.files.length
+        ) {
+
+            showMessage(
+                'Please select a profile photo.',
+                'error'
+            );
+
+            return;
+
+        }
+
+
+        const photo =
+            photoInput.files[0];
+
+
+        if (
+            photo.size >
+            2 * 1024 * 1024
+        ) {
+
+            showMessage(
+                'Photo must not exceed 2MB.',
+                'error'
+            );
+
+            return;
+
+        }
+
+
+        /* Disable save button */
+
+        saveBtn.disabled =
+            true;
+
+        saveBtn.textContent =
+            'Saving...';
+
+
+        showMessage(
+            'Saving your professional profile...',
+            'loading'
+        );
+
+
+        /* Create multipart form data */
+
+        const formData =
+            new FormData(form);
+
+
+        try {
+
+            const response =
+                await fetch(
+                    'doctor_profile_setup.php',
+                    {
+                        method: 'POST',
+
+                        body: formData,
+
+                        credentials:
+                            'same-origin'
+                    }
+                );
+
+
+            const text =
+                await response.text();
+
+
+            let result;
+
+
+            try {
+
+                result =
+                    JSON.parse(text);
+
+            } catch (error) {
+
+                console.error(
+                    'Server response:',
+                    text
+                );
+
+                throw new Error(
+                    'The server did not return a valid response.'
+                );
+
+            }
+
+
+            if (
+                result.success
+            ) {
+
+                showMessage(
+                    result.message ||
+                    'Profile saved successfully.',
+                    'success'
+                );
+
+
+                saveBtn.textContent =
+                    'Saved ✓';
+
+
+                setTimeout(
+                    function() {
+
+                        window.location.href =
+                            result.redirect ||
+                            'screen2.html';
+
+                    },
+                    1000
+                );
+
+
+            } else {
+
+                throw new Error(
+                    result.message ||
+                    'Unable to save your profile.'
+                );
+
+            }
+
+
+        } catch (error) {
+
+            console.error(
+                'Profile save error:',
+                error
+            );
+
+
+            showMessage(
+                error.message ||
+                'Unable to save your profile. Please try again.',
+                'error'
+            );
+
+
+            saveBtn.disabled =
+                false;
+
+            saveBtn.textContent =
+                '✓  Save Profile';
+
+        }
+
+    }
+);
+
+
+/* =============================================================
+   MESSAGE FUNCTIONS
+============================================================= */
+
+function showMessage(
+    text,
+    type
+) {
+
+    message.textContent =
+        text;
+
+    message.className =
+        'message ' + type;
+
+}
+
+
+function clearMessage() {
+
+    message.textContent =
+        '';
+
+    message.className =
+        'message';
+
+}
+
+</script>
+
+</body>
+</html>
