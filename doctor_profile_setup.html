@@ -58,6 +58,12 @@ textarea{resize:vertical;min-height:105px}
 
 .photo-option{
     border:2px solid #e2e8f0;
+    appearance:none;
+    -webkit-appearance:none;
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+    font-family:inherit;
+    color:inherit;
     background:#fffaf5;
     border-radius:15px;
     padding:18px 10px;
@@ -157,43 +163,48 @@ textarea{resize:vertical;min-height:105px}
             <!-- PHOTO -->
             <div class="form-group">
                 <label>
-                    Profile Photo <span class="required">*</span>
+                    Profile Photo <span style="color:#94a3b8;font-weight:400;">(Optional)</span>
                 </label>
 
                 <div class="photo-options">
 
                     <!-- CAMERA -->
-                    <div class="photo-option" onclick="openCamera()">
+                    <button type="button" class="photo-option" onclick="openCamera()" aria-label="Take profile photo with camera">
                         <div class="icon">📷</div>
                         <strong>Take Selfie</strong>
-                        <span>Use camera</span>
-                    </div>
+                        <span>Open camera</span>
+                    </button>
 
                     <!-- STORAGE -->
-                    <div class="photo-option" onclick="openStorage()">
+                    <button type="button" class="photo-option" onclick="openStorage()" aria-label="Choose profile photo from device">
                         <div class="icon">📎</div>
                         <strong>Upload Photo</strong>
-                        <span>From phone storage</span>
-                    </div>
+                        <span>Gallery / Files (optional)</span>
+                    </button>
 
                 </div>
 
-                <!-- Camera input -->
-                <input
-                    type="file"
-                    id="cameraInput"
-                    accept="image/*"
-                    capture="user"
-                    style="display:none"
-                >
+                <!--
+     Separate native file inputs.
+     Camera input uses capture where supported, but the JS also
+     works on browsers that ignore capture.
+-->
+<input
+    type="file"
+    id="cameraInput"
+    name="camera_photo"
+    accept="image/*"
+    capture="user"
+    style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;"
+>
 
-                <!-- Storage input -->
-                <input
-                    type="file"
-                    id="storageInput"
-                    accept="image/jpeg,image/png,image/webp,image/jpg"
-                    style="display:none"
-                >
+<input
+    type="file"
+    id="storageInput"
+    name="storage_photo"
+    accept="image/*"
+    style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;"
+>
 
                 <div id="photoPreview" class="photo-preview">
                     <img id="previewImage" src="" alt="Profile photo preview">
@@ -281,52 +292,157 @@ const saveBtn = document.getElementById('saveBtn');
 let selectedPhoto = null;
 
 function openCamera(){
-    cameraInput.click();
+
+    clearMessage();
+
+    /*
+     * On Android Chrome, Samsung Internet and many mobile
+     * browsers, capture="user" opens the front camera.
+     *
+     * On browsers that do not support capture, the same
+     * input falls back to the device's normal image picker.
+     */
+    try {
+        cameraInput.removeAttribute('disabled');
+        cameraInput.click();
+    } catch(error) {
+        console.error('Camera picker error:', error);
+        showMessage(
+            'Your browser could not open the camera. Please use Upload Photo instead.',
+            'error'
+        );
+    }
 }
 
 function openStorage(){
-    storageInput.click();
+
+    clearMessage();
+
+    try {
+        storageInput.removeAttribute('disabled');
+        storageInput.click();
+    } catch(error) {
+        console.error('Storage picker error:', error);
+        showMessage(
+            'Your browser could not open the file picker. Please check browser permissions.',
+            'error'
+        );
+    }
 }
 
 cameraInput.addEventListener('change', function(){
-    handlePhoto(this.files[0]);
+
+    if(this.files && this.files.length){
+        handlePhoto(this.files[0]);
+    }
+
 });
 
 storageInput.addEventListener('change', function(){
-    handlePhoto(this.files[0]);
+
+    if(this.files && this.files.length){
+        handlePhoto(this.files[0]);
+    }
+
 });
 
 function handlePhoto(file){
 
-    if(!file) return;
-
-    const allowed = [
-        'image/jpeg',
-        'image/jpg',
-        'image/png',
-        'image/webp'
-    ];
-
-    if(!allowed.includes(file.type)){
-        showMessage('Please select a JPG, PNG or WebP image.', 'error');
+    if(!file){
         return;
     }
 
-    if(file.size > 2 * 1024 * 1024){
-        showMessage('The photo must not exceed 2MB.', 'error');
+    /*
+     * Some mobile browsers may return an empty MIME type.
+     * Therefore, validate the extension as a fallback.
+     */
+    const allowedTypes = [
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/webp',
+        'image/heic',
+        'image/heif'
+    ];
+
+    const fileName =
+        (file.name || '').toLowerCase();
+
+    const allowedExtensions = [
+        '.jpg',
+        '.jpeg',
+        '.png',
+        '.webp',
+        '.heic',
+        '.heif'
+    ];
+
+    const validType =
+        !file.type ||
+        allowedTypes.includes(file.type);
+
+    const validExtension =
+        allowedExtensions.some(
+            ext => fileName.endsWith(ext)
+        );
+
+    if(!validType && !validExtension){
+
+        showMessage(
+            'Please select a photo in JPG, PNG, WebP or another supported phone image format.',
+            'error'
+        );
+
+        clearSelectedPhoto();
+        return;
+    }
+
+    /*
+     * 5MB frontend limit.
+     * PHP should enforce its own limit too.
+     */
+    if(file.size > 5 * 1024 * 1024){
+
+        showMessage(
+            'The selected photo is larger than 5MB. Please choose a smaller photo.',
+            'error'
+        );
+
+        clearSelectedPhoto();
         return;
     }
 
     selectedPhoto = file;
 
     selectedFile.textContent =
-        'Selected: ' + file.name;
+        'Selected: ' +
+        (file.name || 'Camera photo');
 
-    const reader = new FileReader();
+    /*
+     * FileReader is supported by modern Android/iOS browsers
+     * and gives an immediate preview without uploading first.
+     */
+    const reader =
+        new FileReader();
 
-    reader.onload = function(e){
-        previewImage.src = e.target.result;
-        photoPreview.classList.add('show');
+    reader.onload = function(event){
+
+        previewImage.src =
+            event.target.result;
+
+        photoPreview.classList.add(
+            'show'
+        );
+
+    };
+
+    reader.onerror = function(){
+
+        showMessage(
+            'The photo could not be previewed. Please try another image.',
+            'error'
+        );
+
     };
 
     reader.readAsDataURL(file);
@@ -334,9 +450,22 @@ function handlePhoto(file){
     clearMessage();
 }
 
-function removePhoto(){
+function clearSelectedPhoto(){
 
     selectedPhoto = null;
+
+    cameraInput.value = '';
+    storageInput.value = '';
+
+    previewImage.src = '';
+    selectedFile.textContent = '';
+
+    photoPreview.classList.remove('show');
+}
+
+function removePhoto(){
+
+    clearSelectedPhoto();
 
     cameraInput.value = '';
     storageInput.value = '';
@@ -396,14 +525,6 @@ form.addEventListener('submit', async function(e){
         return;
     }
 
-    if(!selectedPhoto){
-        showMessage(
-            'Please take a selfie or select a profile photo.',
-            'error'
-        );
-        return;
-    }
-
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving...';
 
@@ -415,11 +536,20 @@ form.addEventListener('submit', async function(e){
     const formData = new FormData(form);
 
     /*
-     * The backend expects $_FILES['photo'].
-     * Append the selected camera/storage image using
-     * exactly that field name.
+     * IMPORTANT:
+     * The camera and storage inputs have different names so
+     * we don't rely on browser-specific handling of input.files.
+     *
+     * The backend receives one normalized field:
+     * $_FILES['photo']
      */
-    formData.append('photo', selectedPhoto);
+    formData.delete('camera_photo');
+    formData.delete('storage_photo');
+    formData.append(
+        'photo',
+        selectedPhoto,
+        selectedPhoto.name || 'doctor_profile.jpg'
+    );
 
     try{
 
