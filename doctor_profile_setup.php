@@ -1,11 +1,52 @@
 <?php
+/*
+|--------------------------------------------------------------------------
+| DOCTOR_PROFILE_SETUP.PHP
+|--------------------------------------------------------------------------
+| Saves/updates the logged-in doctor's profile.
+|
+| Database table: doctors
+|
+| Fields:
+| id
+| user_id
+| photo
+| photo_path
+| country_code
+| dcontact
+| qualifications
+| specialty
+| facility
+| created_at
+| updated_at
+|--------------------------------------------------------------------------
+*/
+
+declare(strict_types=1);
 
 session_start();
 
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
+header('Content-Type: application/json; charset=utf-8');
 
-header('Content-Type: text/html; charset=utf-8');
+error_reporting(0);
+ini_set('display_errors', '0');
+
+
+/*
+|--------------------------------------------------------------------------
+| JSON RESPONSE HELPER
+|--------------------------------------------------------------------------
+*/
+function response(bool $success, string $message, ?string $redirect = null): void
+{
+    echo json_encode([
+        'success'  => $success,
+        'message'  => $message,
+        'redirect' => $redirect
+    ]);
+
+    exit;
+}
 
 
 /*
@@ -13,46 +54,59 @@ header('Content-Type: text/html; charset=utf-8');
 | CHECK LOGIN
 |--------------------------------------------------------------------------
 */
-
-if (!isset($_SESSION['user_id'])) {
-    header("Location: screen2.html");
-    exit();
+if (
+    !isset($_SESSION['user_id']) ||
+    empty($_SESSION['user_id'])
+) {
+    response(false, 'Your session has expired. Please log in again.');
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| DATABASE CONNECTION
+| CHECK DOCTOR ACCOUNT
 |--------------------------------------------------------------------------
 */
+$user_type = strtolower(
+    trim((string)($_SESSION['user_type'] ?? ''))
+);
 
+if (
+    $user_type !== 'doctor'
+) {
+    response(false, 'Unauthorized. Doctor account required.');
+}
+
+
+$user_id = (int)$_SESSION['user_id'];
+
+
+/*
+|--------------------------------------------------------------------------
+| ONLY POST
+|--------------------------------------------------------------------------
+*/
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    response(false, 'Invalid request method.');
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| DATABASE
+|--------------------------------------------------------------------------
+*/
 require_once __DIR__ . '/db_connect.php';
 
-if ($conn->connect_error) {
-    die("Database connection failed.");
+if (
+    !isset($conn) ||
+    !($conn instanceof mysqli) ||
+    $conn->connect_error
+) {
+    response(false, 'Database connection failed.');
 }
 
-$conn->set_charset("utf8mb4");
-
-
-/*
-|--------------------------------------------------------------------------
-| CURRENT LOGGED-IN USER
-|--------------------------------------------------------------------------
-*/
-
-$user_id = (int) $_SESSION['user_id'];
-
-
-/*
-|--------------------------------------------------------------------------
-| ONLY POST REQUESTS
-|--------------------------------------------------------------------------
-*/
-
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    die("❌ Invalid request method.");
-}
+$conn->set_charset('utf8mb4');
 
 
 /*
@@ -60,65 +114,191 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 | GET FORM DATA
 |--------------------------------------------------------------------------
 */
+$qualifications = trim(
+    (string)($_POST['qualifications'] ?? '')
+);
 
-$qualifications =
-    trim($_POST['qualifications'] ?? '');
+$specialty = trim(
+    (string)($_POST['specialty'] ?? '')
+);
 
-$specialty =
-    trim($_POST['specialty'] ?? '');
-
-$facility =
-    trim($_POST['facility'] ?? '');
-
-$countryCode =
-    trim($_POST['countryCode'] ?? '+256');
-
-$dContactRaw =
-    trim($_POST['dContact'] ?? '');
+$facility = trim(
+    (string)($_POST['facility'] ?? '')
+);
 
 
 /*
 |--------------------------------------------------------------------------
-| CLEAN PHONE NUMBER
+| PHONE
+|--------------------------------------------------------------------------
+| Phone is no longer entered on this form because it was captured
+| during signup.
+|
+| We retrieve it from users.phone.
 |--------------------------------------------------------------------------
 */
+$user_stmt = $conn->prepare("
+    SELECT phone
+    FROM users
+    WHERE id = ?
+    LIMIT 1
+");
 
-$phoneDigits =
-    preg_replace(
-        '/\D/',
-        '',
-        $dContactRaw
-    );
+if (!$user_stmt) {
+    $conn->close();
+    response(false, 'Unable to retrieve your account information.');
+}
 
-if ($phoneDigits === null) {
-    $phoneDigits = '';
+$user_stmt->bind_param(
+    'i',
+    $user_id
+);
+
+if (!$user_stmt->execute()) {
+    $user_stmt->close();
+    $conn->close();
+    response(false, 'Unable to retrieve your phone number.');
+}
+
+$user_result = $user_stmt->get_result();
+$user_row = $user_result->fetch_assoc();
+
+$user_stmt->close();
+
+
+if (!$user_row) {
+    $conn->close();
+    response(false, 'User account was not found.');
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| CREATE FULL PHONE NUMBER
+| USE SIGNUP PHONE
 |--------------------------------------------------------------------------
 */
+$signup_phone = trim(
+    (string)($user_row['phone'] ?? '')
+);
 
+if ($signup_phone === '') {
+    $conn->close();
+
+    response(
+        false,
+        'No phone number was found on your signup account.'
+    );
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| SPLIT COUNTRY CODE AND LOCAL NUMBER
+|--------------------------------------------------------------------------
+|
+| Examples:
+|
+| +256772123456
+| +254712345678
+| 0772123456
+|
+|--------------------------------------------------------------------------
+*/
+$country_code = '+256';
+$dcontact = $signup_phone;
+
+
+/*
+|--------------------------------------------------------------------------
+| NORMALIZE PHONE
+|--------------------------------------------------------------------------
+*/
+$phone_digits = preg_replace(
+    '/\D/',
+    '',
+    $signup_phone
+);
+
+if ($phone_digits === null) {
+    $phone_digits = '';
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| Detect common Uganda format
+|--------------------------------------------------------------------------
+*/
 if (
     str_starts_with(
-        $phoneDigits,
+        $phone_digits,
+        '256'
+    )
+) {
+
+    $country_code = '+256';
+
+    $dcontact =
+        substr(
+            $phone_digits,
+            3
+        );
+
+} elseif (
+    str_starts_with(
+        $phone_digits,
+        '254'
+    )
+) {
+
+    $country_code = '+254';
+
+    $dcontact =
+        substr(
+            $phone_digits,
+            3
+        );
+
+} elseif (
+    str_starts_with(
+        $phone_digits,
+        '255'
+    )
+) {
+
+    $country_code = '+255';
+
+    $dcontact =
+        substr(
+            $phone_digits,
+            3
+        );
+
+} elseif (
+    str_starts_with(
+        $phone_digits,
         '0'
     )
 ) {
 
-    $phoneDigits =
+    /*
+     * Local Uganda number such as 0772123456.
+     */
+    $country_code = '+256';
+
+    $dcontact =
         substr(
-            $phoneDigits,
+            $phone_digits,
             1
         );
+
+} else {
+
+    /*
+     * Fallback.
+     */
+    $dcontact = $phone_digits;
 }
-
-
-$dcontact =
-    $countryCode .
-    $phoneDigits;
 
 
 /*
@@ -126,136 +306,170 @@ $dcontact =
 | VALIDATE REQUIRED FIELDS
 |--------------------------------------------------------------------------
 */
-
-if ($qualifications === '') {
-    die("⚠️ Please enter your qualifications.");
-}
-
-if ($specialty === '') {
-    die("⚠️ Please enter your specialty.");
-}
-
-if ($facility === '') {
-    die("⚠️ Please enter your facility.");
-}
-
-if ($phoneDigits === '') {
-    die("⚠️ Please enter your contact number.");
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| PHOTO UPLOAD
-|--------------------------------------------------------------------------
-*/
-
 if (
-    !isset($_FILES['photo']) ||
-    $_FILES['photo']['error'] !== UPLOAD_ERR_OK
+    $qualifications === '' ||
+    $specialty === '' ||
+    $facility === ''
 ) {
-    die("❌ Please select a profile picture.");
-}
+    $conn->close();
 
-
-/*
-|--------------------------------------------------------------------------
-| CHECK FILE SIZE
-|--------------------------------------------------------------------------
-|
-| Maximum: 5 MB
-|
-*/
-
-$maxFileSize =
-    5 * 1024 * 1024;
-
-if (
-    $_FILES['photo']['size'] >
-    $maxFileSize
-) {
-    die("❌ Profile picture must not exceed 5 MB.");
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| CHECK REAL FILE TYPE
-|--------------------------------------------------------------------------
-*/
-
-$tmpFile =
-    $_FILES['photo']['tmp_name'];
-
-
-$imageInfo =
-    getimagesize($tmpFile);
-
-
-if ($imageInfo === false) {
-    die("❌ The selected file is not a valid image.");
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| ALLOWED IMAGE TYPES
-|--------------------------------------------------------------------------
-*/
-
-$allowedTypes = [
-    IMAGETYPE_JPEG => 'jpg',
-    IMAGETYPE_PNG  => 'png',
-    IMAGETYPE_WEBP => 'webp'
-];
-
-
-$imageType =
-    $imageInfo[2];
-
-
-/*
-|--------------------------------------------------------------------------
-| REJECT UNSUPPORTED FILES
-|--------------------------------------------------------------------------
-*/
-
-if (
-    !isset(
-        $allowedTypes[$imageType]
-    )
-) {
-
-    die(
-        "❌ Please upload a JPG, PNG or WEBP image."
+    response(
+        false,
+        'Qualifications, specialty and facility are required.'
     );
 }
 
 
 /*
 |--------------------------------------------------------------------------
-| CREATE UPLOAD DIRECTORY
+| PHOTO VALIDATION
 |--------------------------------------------------------------------------
 */
+$photo_name = '';
+$photo_path = '';
 
-$uploadDir =
-    __DIR__ . '/uploads/doctors/';
+$has_photo = (
+    isset($_FILES['photo']) &&
+    is_array($_FILES['photo'])
+);
+
+
+if (!$has_photo) {
+
+    $conn->close();
+
+    response(
+        false,
+        'Please take a selfie or select a profile photo.'
+    );
+}
 
 
 if (
-    !is_dir($uploadDir)
+    $_FILES['photo']['error'] !== UPLOAD_ERR_OK
+) {
+
+    $upload_error =
+        (int)$_FILES['photo']['error'];
+
+    $conn->close();
+
+    response(
+        false,
+        'Photo upload failed. Error code: ' .
+        $upload_error
+    );
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| FILE SIZE
+|--------------------------------------------------------------------------
+*/
+$max_size =
+    2 * 1024 * 1024;
+
+if (
+    (int)$_FILES['photo']['size'] >
+    $max_size
+) {
+
+    $conn->close();
+
+    response(
+        false,
+        'Photo must not exceed 2MB.'
+    );
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| VERIFY THAT IT IS ACTUALLY AN IMAGE
+|--------------------------------------------------------------------------
+*/
+$tmp_name =
+    $_FILES['photo']['tmp_name'];
+
+$image_info =
+    @getimagesize($tmp_name);
+
+if ($image_info === false) {
+
+    $conn->close();
+
+    response(
+        false,
+        'The selected file is not a valid image.'
+    );
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| DETERMINE SAFE MIME TYPE
+|--------------------------------------------------------------------------
+*/
+$allowed_mimes = [
+    'image/jpeg' => 'jpg',
+    'image/png'  => 'png',
+    'image/webp' => 'webp'
+];
+
+$finfo =
+    new finfo(FILEINFO_MIME_TYPE);
+
+$mime =
+    $finfo->file($tmp_name);
+
+if (
+    !isset($allowed_mimes[$mime])
+) {
+
+    $conn->close();
+
+    response(
+        false,
+        'Only JPG, PNG and WebP images are allowed.'
+    );
+}
+
+
+$extension =
+    $allowed_mimes[$mime];
+
+
+/*
+|--------------------------------------------------------------------------
+| UPLOAD DIRECTORY
+|--------------------------------------------------------------------------
+*/
+$upload_directory =
+    __DIR__ .
+    DIRECTORY_SEPARATOR .
+    'uploads' .
+    DIRECTORY_SEPARATOR .
+    'doctors';
+
+
+if (
+    !is_dir($upload_directory)
 ) {
 
     if (
         !mkdir(
-            $uploadDir,
+            $upload_directory,
             0755,
             true
         )
     ) {
 
-        die(
-            "❌ Unable to create upload directory."
+        $conn->close();
+
+        response(
+            false,
+            'Unable to create the doctor photo folder.'
         );
     }
 }
@@ -263,47 +477,29 @@ if (
 
 /*
 |--------------------------------------------------------------------------
-| CREATE SAFE UNIQUE FILE NAME
+| UNIQUE FILE NAME
 |--------------------------------------------------------------------------
 */
-
-$extension =
-    $allowedTypes[$imageType];
-
-
-$fileName =
+$unique_name =
     'doctor_' .
     $user_id .
     '_' .
     bin2hex(
-        random_bytes(8)
+        random_bytes(6)
     ) .
     '.' .
     $extension;
 
 
-$fullFilePath =
-    $uploadDir .
-    $fileName;
-
-
 /*
 |--------------------------------------------------------------------------
-| MOVE UPLOADED FILE
+| PHYSICAL FILE PATH
 |--------------------------------------------------------------------------
 */
-
-if (
-    !move_uploaded_file(
-        $tmpFile,
-        $fullFilePath
-    )
-) {
-
-    die(
-        "❌ Failed to save the profile picture."
-    );
-}
+$physical_path =
+    $upload_directory .
+    DIRECTORY_SEPARATOR .
+    $unique_name;
 
 
 /*
@@ -311,39 +507,70 @@ if (
 | DATABASE PATH
 |--------------------------------------------------------------------------
 */
-
-$photoPath =
+$photo_path =
     'uploads/doctors/' .
-    $fileName;
+    $unique_name;
 
 
 /*
 |--------------------------------------------------------------------------
-| CHECK IF DOCTOR PROFILE ALREADY EXISTS
+| MOVE UPLOADED PHOTO
 |--------------------------------------------------------------------------
 */
+if (
+    !move_uploaded_file(
+        $tmp_name,
+        $physical_path
+    )
+) {
 
-$check =
-    $conn->prepare(
-        "SELECT id, photo
-         FROM doctors
-         WHERE user_id = ?
-         LIMIT 1"
-    );
+    $conn->close();
 
-
-if (!$check) {
-
-    @unlink($fullFilePath);
-
-    die(
-        "❌ Unable to check doctor profile."
+    response(
+        false,
+        'Unable to save the uploaded photo.'
     );
 }
 
 
+/*
+|--------------------------------------------------------------------------
+| PHOTO COLUMN
+|--------------------------------------------------------------------------
+| Store the file name in photo and the web path in photo_path.
+|--------------------------------------------------------------------------
+*/
+$photo_name =
+    $unique_name;
+
+
+/*
+|--------------------------------------------------------------------------
+| CHECK EXISTING DOCTOR PROFILE
+|--------------------------------------------------------------------------
+*/
+$check =
+    $conn->prepare("
+        SELECT id, photo_path
+        FROM doctors
+        WHERE user_id = ?
+        LIMIT 1
+    ");
+
+if (!$check) {
+
+    @unlink($physical_path);
+
+    $conn->close();
+
+    response(
+        false,
+        'Unable to check the doctor profile.'
+    );
+}
+
 $check->bind_param(
-    "i",
+    'i',
     $user_id
 );
 
@@ -352,7 +579,7 @@ $check->execute();
 $result =
     $check->get_result();
 
-$existingDoctor =
+$existing =
     $result->fetch_assoc();
 
 $check->close();
@@ -360,144 +587,197 @@ $check->close();
 
 /*
 |--------------------------------------------------------------------------
-| UPDATE EXISTING DOCTOR
+| DELETE OLD PHOTO IF REPLACING IT
 |--------------------------------------------------------------------------
 */
-
-if ($existingDoctor) {
-
-    /*
-     * Remove previous profile picture
-     * if one exists.
-     */
-
-    if (
-        !empty(
-            $existingDoctor['photo']
-        )
-    ) {
-
-        $oldPhoto =
-            __DIR__ . '/' .
-            $existingDoctor['photo'];
-
-
-        if (
-            is_file($oldPhoto)
-        ) {
-
-            @unlink($oldPhoto);
-        }
-    }
-
-
-    $stmt =
-        $conn->prepare(
-            "UPDATE doctors
-             SET
-                photo = ?,
-                qualifications = ?,
-                specialty = ?,
-                facility = ?,
-                dcontact = ?
-             WHERE user_id = ?"
-        );
-
-
-    if (!$stmt) {
-
-        @unlink($fullFilePath);
-
-        die(
-            "❌ Unable to prepare doctor profile update."
-        );
-    }
-
-
-    $stmt->bind_param(
-        "sssssi",
-        $photoPath,
-        $qualifications,
-        $specialty,
-        $facility,
-        $dcontact,
-        $user_id
+$old_photo_path =
+    (string)(
+        $existing['photo_path'] ?? ''
     );
-
-
-    if (!$stmt->execute()) {
-
-        @unlink($fullFilePath);
-
-        $stmt->close();
-
-        die(
-            "❌ Failed to update doctor profile."
-        );
-    }
-
-
-    $stmt->close();
 
 
 /*
 |--------------------------------------------------------------------------
-| INSERT NEW DOCTOR
+| UPDATE EXISTING PROFILE
 |--------------------------------------------------------------------------
 */
-
-} else {
+if ($existing) {
 
     $stmt =
-        $conn->prepare(
-            "INSERT INTO doctors
-            (
-                user_id,
-                photo,
-                qualifications,
-                specialty,
-                facility,
-                dcontact
-            )
-            VALUES (?, ?, ?, ?, ?, ?)"
-        );
-
+        $conn->prepare("
+            UPDATE doctors
+            SET
+                photo = ?,
+                photo_path = ?,
+                country_code = ?,
+                dcontact = ?,
+                qualifications = ?,
+                specialty = ?,
+                facility = ?,
+                updated_at = NOW()
+            WHERE user_id = ?
+        ");
 
     if (!$stmt) {
 
-        @unlink($fullFilePath);
+        @unlink($physical_path);
 
-        die(
-            "❌ Unable to prepare doctor profile."
+        $conn->close();
+
+        response(
+            false,
+            'Unable to prepare profile update.'
         );
     }
 
-
     $stmt->bind_param(
-        "isssss",
-        $user_id,
-        $photoPath,
+        'sssssssi',
+        $photo_name,
+        $photo_path,
+        $country_code,
+        $dcontact,
         $qualifications,
         $specialty,
         $facility,
-        $dcontact
+        $user_id
     );
 
 
-    if (!$stmt->execute()) {
+/*
+|--------------------------------------------------------------------------
+| INSERT NEW PROFILE
+|--------------------------------------------------------------------------
+*/
+} else {
 
-        @unlink($fullFilePath);
+    $stmt =
+        $conn->prepare("
+            INSERT INTO doctors
+            (
+                user_id,
+                photo,
+                photo_path,
+                country_code,
+                dcontact,
+                qualifications,
+                specialty,
+                facility,
+                created_at,
+                updated_at
+            )
+            VALUES
+            (
+                ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
+            )
+        ");
 
-        $stmt->close();
+    if (!$stmt) {
 
-        die(
-            "❌ Failed to save doctor profile."
+        @unlink($physical_path);
+
+        $conn->close();
+
+        response(
+            false,
+            'Unable to prepare profile creation.'
         );
     }
 
+    $stmt->bind_param(
+        'isssssss',
+        $user_id,
+        $photo_name,
+        $photo_path,
+        $country_code,
+        $dcontact,
+        $qualifications,
+        $specialty,
+        $facility
+    );
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| EXECUTE
+|--------------------------------------------------------------------------
+*/
+if (!$stmt->execute()) {
+
+    $error =
+        $stmt->error;
 
     $stmt->close();
+
+    @unlink($physical_path);
+
+    $conn->close();
+
+    response(
+        false,
+        'Database error: ' . $error
+    );
 }
+
+$stmt->close();
+
+
+/*
+|--------------------------------------------------------------------------
+| REMOVE OLD PHOTO AFTER SUCCESSFUL UPDATE
+|--------------------------------------------------------------------------
+*/
+if (
+    $existing &&
+    $old_photo_path !== '' &&
+    $old_photo_path !== $photo_path
+) {
+
+    $old_physical =
+        __DIR__ .
+        DIRECTORY_SEPARATOR .
+        str_replace(
+            '/',
+            DIRECTORY_SEPARATOR,
+            $old_photo_path
+        );
+
+    if (
+        is_file($old_physical)
+    ) {
+        @unlink($old_physical);
+    }
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| LOG OUT DOCTOR AFTER SUCCESSFUL SAVE
+|--------------------------------------------------------------------------
+*/
+$_SESSION = [];
+
+if (
+    ini_get("session.use_cookies")
+) {
+
+    $params =
+        session_get_cookie_params();
+
+    setcookie(
+        session_name(),
+        '',
+        time() - 42000,
+        $params["path"],
+        $params["domain"],
+        $params["secure"],
+        $params["httponly"]
+    );
+}
+
+session_destroy();
+
+$conn->close();
 
 
 /*
@@ -505,65 +785,10 @@ if ($existingDoctor) {
 | SUCCESS
 |--------------------------------------------------------------------------
 */
-
-$conn->close();
-
-
-echo "
-<!DOCTYPE html>
-<html>
-<head>
-<meta name='viewport' content='width=device-width, initial-scale=1.0'>
-<title>Profile Saved</title>
-<style>
-body {
-    font-family: Arial, sans-serif;
-    background: #fff5e8;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    margin: 0;
-}
-.box {
-    background: white;
-    padding: 30px;
-    border-radius: 20px;
-    text-align: center;
-    box-shadow: 0 8px 25px rgba(0,0,0,.08);
-    max-width: 400px;
-    margin: 20px;
-}
-h2 {
-    color: #17458f;
-}
-p {
-    color: #64748b;
-}
-</style>
-</head>
-
-<body>
-
-<div class='box'>
-
-<h2>✅ Profile Saved</h2>
-
-<p>
-Your doctor profile and profile picture
-have been saved successfully.
-</p>
-
-</div>
-
-<script>
-setTimeout(function() {
-    window.location.href = 'doctor_dashboard.html';
-}, 1200);
-</script>
-
-</body>
-</html>
-";
+response(
+    true,
+    'Doctor profile saved successfully. You can now log in.',
+    'screen2.html'
+);
 
 ?>
