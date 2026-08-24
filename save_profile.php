@@ -1,762 +1,224 @@
 <?php
-
 session_start();
 
-
-/*
-|--------------------------------------------------------------------------
-| CANCEL / LOGOUT
-|--------------------------------------------------------------------------
-|
-| The Cancel button can submit:
-|
-| action=cancel
-|
-| This completely destroys the current session and sends
-| the user back to the login page.
-|
-*/
-
-if (
-    isset($_POST['action']) &&
-    $_POST['action'] === 'cancel'
-) {
-
-    // Clear all session variables
-    $_SESSION = [];
-
-
-    // Remove session cookie
-    if (ini_get("session.use_cookies")) {
-
-        $params =
-            session_get_cookie_params();
-
-        setcookie(
-            session_name(),
-            '',
-            time() - 42000,
-            $params["path"],
-            $params["domain"],
-            $params["secure"],
-            $params["httponly"]
-        );
-    }
-
-
-    // Completely destroy session
-    session_destroy();
-
-
-    // Always return to login
-    header(
-        "Location: screen4.html"
-    );
-
-    exit();
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| SECURITY: USER MUST BE LOGGED IN
-|--------------------------------------------------------------------------
-*/
-
+// Redirect if not logged in
 if (!isset($_SESSION['user_id'])) {
-
-    header(
-        "Location: screen4.html"
-    );
-
-    exit();
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| DATABASE CONNECTION
-|--------------------------------------------------------------------------
-*/
-
-require_once __DIR__ .
-    '/db_connect.php';
-
-
-if ($conn->connect_error) {
-
-    die(
-        "Connection failed: " .
-        $conn->connect_error
-    );
-}
-
-
-$conn->set_charset(
-    "utf8mb4"
-);
-
-
-/*
-|--------------------------------------------------------------------------
-| AUTHENTICATED USER ID
-|--------------------------------------------------------------------------
-|
-| Everything below belongs to the currently logged-in user.
-|
-*/
-
-$user_id =
-    (int)$_SESSION['user_id'];
-
-if ($user_id <= 0) {
-    $_SESSION['profile_errors'] = [
-        "Invalid logged-in user."
-    ];
-
     header("Location: screen2.html");
     exit();
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| GET FORM DATA
-|--------------------------------------------------------------------------
-*/
-
-
-/* Personal information */
-
-$firstname =
-    trim(
-        $_POST['firstname'] ?? ''
-    );
-
-
-$lastname =
-    trim(
-        $_POST['lastname'] ?? ''
-    );
-
-
-$email =
-    trim(
-        $_POST['email'] ?? ''
-    );
-
-
-/* Phone */
-
-$kin_country_code =
-    $_POST['kin_country_code']
-    ?? '+256';
-
-
-$phone_number =
-    trim(
-        $_POST['phone'] ?? ''
-    );
-
-
-/*
-|--------------------------------------------------------------------------
-| NORMALIZE PHONE
-|--------------------------------------------------------------------------
-*/
-
-$phone_digits =
-    preg_replace(
-        '/\D/',
-        '',
-        $phone_number
-    );
-
-
-if ($phone_digits === null) {
-
-    $phone_digits = '';
+require_once __DIR__ . '/db_connect.php';
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
 }
 
+$user_id = $_SESSION['user_id'];
 
-if (
-    str_starts_with(
-        $phone_digits,
-        '256'
-    )
-) {
+// ========== GET FORM DATA ==========
+// Personal details (goes to users table)
+$firstname = trim($_POST['firstname'] ?? '');
+$lastname = trim($_POST['lastname'] ?? '');
+$email = trim($_POST['email'] ?? ''); // readonly, but still captured
 
-    $full_phone =
-        '+' .
-        $phone_digits;
+// Phone number (goes to users table)
+$kin_country_code = $_POST['kin_country_code'] ?? '+256';
+$phone_number = trim($_POST['phone'] ?? '');
+$full_phone = $kin_country_code . $phone_number;
 
-} elseif (
-    str_starts_with(
-        $phone_digits,
-        '0'
-    )
-) {
+// Profile data (goes to user_profiles table)
+$age = !empty($_POST['age']) ? intval($_POST['age']) : null;
+$nationality = trim($_POST['nationality'] ?? '');
+$district = trim($_POST['district'] ?? '');
+$sub_county = trim($_POST['sub_county'] ?? '');
+$parish = trim($_POST['parish'] ?? '');
+$village = trim($_POST['village'] ?? '');
+$nearest_health = trim($_POST['nearest_health'] ?? '');
+$kin_name = trim($_POST['kin_name'] ?? '');
+$kin_relationship = trim($_POST['kin_relationship'] ?? '');
+$kin_contact = trim($_POST['kin_contact'] ?? '');
+$full_kin_contact = $kin_country_code . $kin_contact;
+$last_period = !empty($_POST['last_period']) ? $_POST['last_period'] : null;
+$expected_delivery = !empty($_POST['expected_delivery']) ? $_POST['expected_delivery'] : null;
 
-    $full_phone =
-        '+256' .
-        substr(
-            $phone_digits,
-            1
-        );
-
-} else {
-
-    $full_phone =
-        $kin_country_code .
-        $phone_digits;
-}
-
-
-/*
-|--------------------------------------------------------------------------
-| PROFILE INFORMATION
-|--------------------------------------------------------------------------
-*/
-
-$age =
-    !empty($_POST['age'])
-        ? intval($_POST['age'])
-        : null;
-
-
-$nationality =
-    trim(
-        $_POST['nationality'] ?? ''
-    );
-
-
-$district =
-    trim(
-        $_POST['district'] ?? ''
-    );
-
-
-$sub_county =
-    trim(
-        $_POST['sub_county'] ?? ''
-    );
-
-
-$parish =
-    trim(
-        $_POST['parish'] ?? ''
-    );
-
-
-$village =
-    trim(
-        $_POST['village'] ?? ''
-    );
-
-
-$nearest_health =
-    trim(
-        $_POST['nearest_health'] ?? ''
-    );
-
-
-/*
-|--------------------------------------------------------------------------
-| NEXT OF KIN
-|--------------------------------------------------------------------------
-*/
-
-$kin_name =
-    trim(
-        $_POST['kin_name'] ?? ''
-    );
-
-
-$kin_relationship =
-    trim(
-        $_POST['kin_relationship'] ?? ''
-    );
-
-
-$kin_contact =
-    trim(
-        $_POST['kin_contact'] ?? ''
-    );
-
-
-$full_kin_contact =
-    $kin_country_code .
-    $kin_contact;
-
-
-/*
-|--------------------------------------------------------------------------
-| PREGNANCY DATES
-|--------------------------------------------------------------------------
-*/
-
-$last_period =
-    !empty($_POST['last_period'])
-        ? $_POST['last_period']
-        : null;
-
-
-$expected_delivery =
-    !empty($_POST['expected_delivery'])
-        ? $_POST['expected_delivery']
-        : null;
-
-
-/*
-|--------------------------------------------------------------------------
-| VALIDATION
-|--------------------------------------------------------------------------
-*/
-
+// ========== VALIDATION ==========
 $errors = [];
 
-
-/*
-|--------------------------------------------------------------------------
-| REQUIRED FIELDS
-|--------------------------------------------------------------------------
-*/
-
-if ($firstname === '') {
-
-    $errors[] =
-        "First name is required.";
+// Validate required fields
+if (empty($firstname)) {
+    $errors[] = "First name is required";
 }
-
-
-if ($lastname === '') {
-
-    $errors[] =
-        "Last name is required.";
+if (empty($lastname)) {
+    $errors[] = "Last name is required";
 }
-
-
-if ($phone_number === '') {
-
-    $errors[] =
-        "Phone number is required.";
+if (empty($phone_number)) {
+    $errors[] = "Phone number is required";
 }
-
-
-/*
-|--------------------------------------------------------------------------
-| OPTIONAL EMAIL
-|--------------------------------------------------------------------------
-*/
-
-if (
-    $email !== '' &&
-    !filter_var(
-        $email,
-        FILTER_VALIDATE_EMAIL
-    )
-) {
-
-    $errors[] =
-        "Invalid email format.";
+if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    $errors[] = "Invalid email format";
 }
-
-
-/*
-|--------------------------------------------------------------------------
-| AGE
-|--------------------------------------------------------------------------
-*/
-
-if (
-    $age !== null &&
-    ($age < 12 || $age > 120)
-) {
-
-    $errors[] =
-        "Age must be between 12 and 120.";
+if (!empty($age) && ($age < 12 || $age > 120)) {
+    $errors[] = "Age must be between 12 and 120";
 }
-
-
-/*
-|--------------------------------------------------------------------------
-| LAST MENSTRUAL PERIOD
-|--------------------------------------------------------------------------
-*/
-
-if (
-    $last_period !== null &&
-    !strtotime($last_period)
-) {
-
-    $errors[] =
-        "Invalid last menstrual period date.";
+if (!empty($last_period) && !strtotime($last_period)) {
+    $errors[] = "Invalid last menstrual period date";
 }
-
-
-/*
-|--------------------------------------------------------------------------
-| EXPECTED DELIVERY DATE
-|--------------------------------------------------------------------------
-*/
-
-if (
-    $expected_delivery !== null &&
-    !strtotime($expected_delivery)
-) {
-
-    $errors[] =
-        "Invalid expected delivery date.";
+if (!empty($expected_delivery) && !strtotime($expected_delivery)) {
+    $errors[] = "Invalid expected delivery date";
 }
-
-
-/*
-|--------------------------------------------------------------------------
-| DATE RELATIONSHIP
-|--------------------------------------------------------------------------
-*/
-
-if (
-    $last_period !== null &&
-    $expected_delivery !== null
-) {
-
-    $last_period_time =
-        strtotime($last_period);
-
-
-    $expected_delivery_time =
-        strtotime($expected_delivery);
-
-
-    if (
-        $expected_delivery_time <=
-        $last_period_time
-    ) {
-
-        $errors[] =
-            "Expected delivery date must be after last menstrual period.";
+if (!empty($last_period) && !empty($expected_delivery)) {
+    $last_period_time = strtotime($last_period);
+    $expected_delivery_time = strtotime($expected_delivery);
+    if ($expected_delivery_time <= $last_period_time) {
+        $errors[] = "Expected delivery date must be after last menstrual period";
     }
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| VALIDATION ERROR
-|--------------------------------------------------------------------------
-|
-| Return to profile page.
-|
-*/
-
+// If there are errors, redirect back with error messages
 if (!empty($errors)) {
-
-    $_SESSION['profile_errors'] =
-        $errors;
-
-
-    $_SESSION['form_data'] =
-        $_POST;
-
-
-    header(
-        "Location: screen4.html"
-    );
-
+    $_SESSION['profile_errors'] = $errors;
+    $_SESSION['form_data'] = $_POST;
+    header("Location: screen4.php");
     exit();
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| START TRANSACTION
-|--------------------------------------------------------------------------
-*/
-
+// ========== START TRANSACTION ==========
 $conn->begin_transaction();
 
-
 try {
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | 1. UPDATE USERS TABLE
-    |--------------------------------------------------------------------------
-    */
-
+    // ========== 1. UPDATE USERS TABLE ==========
+    // Update firstname, lastname, phone (email is readonly so we don't update it)
+    $update_user = $conn->prepare("UPDATE users SET firstname = ?, lastname = ?, phone = ? WHERE id = ?");
+    $update_user->bind_param("sssi", $firstname, $lastname, $full_phone, $user_id);
     
-    /*
-     * Update basic user information.
-     */
-    $update_user = $conn->prepare(
-        "UPDATE users
-         SET firstname = ?,
-             lastname = ?,
-             phone = ?
-         WHERE id = ?"
-    );
-
-    if (!$update_user) {
-        throw new Exception(
-            "Failed to prepare user update: " .
-            $conn->error
-        );
-    }
-
-    $update_user->bind_param(
-        "sssi",
-        $firstname,
-        $lastname,
-        $full_phone,
-        $user_id
-    );
-
     if (!$update_user->execute()) {
-        throw new Exception(
-            "Failed to update user information: " .
-            $update_user->error
-        );
+        throw new Exception("Failed to update user information: " . $update_user->error);
     }
-
     $update_user->close();
 
-
-    /*
-     * Check whether the profile already exists.
-     */
-    $check = $conn->prepare(
-        "SELECT id
-         FROM user_profiles
-         WHERE user_id = ?
-         LIMIT 1"
-    );
-
-    if (!$check) {
-        throw new Exception(
-            "Failed to prepare profile check: " .
-            $conn->error
-        );
-    }
-
+    // ========== 2. CHECK IF PROFILE EXISTS IN USER_PROFILES ==========
+    $check = $conn->prepare("SELECT id FROM user_profiles WHERE user_id = ?");
     $check->bind_param("i", $user_id);
-
-    if (!$check->execute()) {
-        throw new Exception(
-            "Failed to check user profile: " .
-            $check->error
-        );
-    }
-
+    $check->execute();
     $result = $check->get_result();
-
-    $profile_exists =
-        $result &&
-        $result->num_rows > 0;
-
+    $profile_exists = $result->num_rows > 0;
     $check->close();
 
-
-    /*
-     * Update existing profile.
-     */
+    // ========== 3. SAVE/UPDATE USER_PROFILES TABLE ==========
     if ($profile_exists) {
-
-        $stmt = $conn->prepare(
-            "UPDATE user_profiles
-             SET
-                 phone = ?,
-                 age = ?,
-                 nationality = ?,
-                 district = ?,
-                 sub_county = ?,
-                 parish = ?,
-                 village = ?,
-                 nearest_health = ?,
-                 kin_name = ?,
-                 kin_relationship = ?,
-                 kin_contact = ?,
-                 kin_country_code = ?,
-                 last_period = ?,
-                 expected_delivery = ?
-             WHERE user_id = ?"
-        );
-
+        // UPDATE existing profile
+        $stmt = $conn->prepare("
+            UPDATE user_profiles SET 
+                age = ?, 
+                nationality = ?, 
+                district = ?, 
+                sub_county = ?, 
+                parish = ?, 
+                village = ?, 
+                nearest_health = ?,
+                kin_name = ?, 
+                kin_relationship = ?, 
+                kin_contact = ?,
+                kin_country_code = ?,
+                last_period = ?, 
+                expected_delivery = ?,
+                updated_at = NOW()
+            WHERE user_id = ?
+        ");
+        
         if (!$stmt) {
-            throw new Exception(
-                "Failed to prepare profile update: " .
-                $conn->error
-            );
+            throw new Exception("Failed to prepare update statement: " . $conn->error);
         }
-
-        $stmt->bind_param(
-            "sissssssssssssi",
-            $full_phone,
-            $age,
-            $nationality,
-            $district,
-            $sub_county,
-            $parish,
-            $village,
+        
+        $stmt->bind_param("issssssssssssi", 
+            $age, 
+            $nationality, 
+            $district, 
+            $sub_county, 
+            $parish, 
+            $village, 
             $nearest_health,
-            $kin_name,
-            $kin_relationship,
-            $full_kin_contact,
+            $kin_name, 
+            $kin_relationship, 
+            $full_kin_contact, 
             $kin_country_code,
-            $last_period,
-            $expected_delivery,
+            $last_period, 
+            $expected_delivery, 
             $user_id
         );
-
+        
         if (!$stmt->execute()) {
-            throw new Exception(
-                "Failed to update profile: " .
-                $stmt->error
-            );
+            throw new Exception("Failed to update profile: " . $stmt->error);
         }
-
         $stmt->close();
-
     } else {
-
-        /*
-         * Create new profile.
-         */
-        $stmt = $conn->prepare(
-            "INSERT INTO user_profiles
-            (
-                user_id,
-                phone,
-                age,
-                nationality,
-                district,
-                sub_county,
-                parish,
-                village,
+        // INSERT new profile
+        $stmt = $conn->prepare("
+            INSERT INTO user_profiles (
+                user_id, 
+                age, 
+                nationality, 
+                district, 
+                sub_county, 
+                parish, 
+                village, 
                 nearest_health,
-                kin_name,
-                kin_relationship,
-                kin_contact,
-                kin_country_code,
-                last_period,
+                kin_name, 
+                kin_relationship, 
+                kin_contact, 
+                kin_country_code, 
+                last_period, 
                 expected_delivery
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        );
-
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        
         if (!$stmt) {
-            throw new Exception(
-                "Failed to prepare profile creation: " .
-                $conn->error
-            );
+            throw new Exception("Failed to prepare insert statement: " . $conn->error);
         }
-
-        $stmt->bind_param(
-            "isssssssssssssss",
-            $user_id,
-            $full_phone,
-            $age,
-            $nationality,
-            $district,
-            $sub_county,
-            $parish,
-            $village,
+        
+        $stmt->bind_param("iissssssssssss", 
+            $user_id, 
+            $age, 
+            $nationality, 
+            $district, 
+            $sub_county, 
+            $parish, 
+            $village, 
             $nearest_health,
-            $kin_name,
-            $kin_relationship,
-            $full_kin_contact,
-            $kin_country_code,
-            $last_period,
+            $kin_name, 
+            $kin_relationship, 
+            $full_kin_contact, 
+            $kin_country_code, 
+            $last_period, 
             $expected_delivery
         );
-
+        
         if (!$stmt->execute()) {
-            throw new Exception(
-                "Failed to create profile: " .
-                $stmt->error
-            );
+            throw new Exception("Failed to insert profile: " . $stmt->error);
         }
-
         $stmt->close();
     }
 
-
-    /*
-     * Commit transaction.
-     */
-$conn->commit();
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | 6. SUCCESS → DASHBOARD
-    |--------------------------------------------------------------------------
-    */
-
-    $_SESSION['profile_success'] =
-        "Profile updated successfully!";
-
-
-    header(
-        "Location: dashboard.html"
-    );
-
+    // ========== COMMIT TRANSACTION ==========
+    $conn->commit();
+    
+    // ========== SET SUCCESS MESSAGE AND REDIRECT ==========
+    $_SESSION['profile_success'] = "Profile updated successfully!";
+    header("Location: screen4.php");
     exit();
 
-
 } catch (Exception $e) {
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | ROLLBACK
-    |--------------------------------------------------------------------------
-    */
-
+    // ========== ROLLBACK ON ERROR ==========
     $conn->rollback();
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | LOG ERROR
-    |--------------------------------------------------------------------------
-    */
-
-    error_log(
-        "MotherCare profile update error: " .
-        $e->getMessage()
-    );
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | RETURN TO PROFILE
-    |--------------------------------------------------------------------------
-    */
-
-    $_SESSION['profile_errors'] = [
-        "Profile could not be saved: " . $e->getMessage()
-    ];
-
-
-    $_SESSION['form_data'] =
-        $_POST;
-
-
-    header(
-        "Location: screen4.html"
-    );
-
+    
+    // Log the error (you might want to use error_log in production)
+    error_log("Profile update error: " . $e->getMessage());
+    
+    // Set error message and redirect
+    $_SESSION['profile_errors'] = ["An error occurred while saving your profile. Please try again."];
+    $_SESSION['form_data'] = $_POST;
+    header("Location: screen4.php");
     exit();
 }
 
-
-/*
-|--------------------------------------------------------------------------
-| CLOSE DATABASE
-|--------------------------------------------------------------------------
-*/
-
 $conn->close();
-
 ?>
