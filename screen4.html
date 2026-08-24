@@ -462,6 +462,16 @@
         <div class="form-content">
             <!-- Basic Information -->
             <div class="section-title">About You</div>
+
+            <div class="form-row">
+                <label>Phone Number</label>
+                <input type="tel" name="phone" id="phone" placeholder="e.g., 0772 123 456" inputmode="tel">
+            </div>
+
+            <div class="form-row">
+                <label>Nationality</label>
+                <input type="text" name="nationality" id="nationality" value="Ugandan" placeholder="e.g., Ugandan">
+            </div>
             
 
             
@@ -482,15 +492,15 @@
 
             <div class="form-row">
                 <label>County / Municipality</label>
-                <select name="county" id="county" required>
+                <select name="county_ui" id="county" required>
                     <option value="">Select district or city first</option>
                 </select>
-                <input type="hidden" name="county" id="countyFallback" value="" disabled>
+                <input type="hidden" name="county_ui" id="countyFallback" value="" disabled>
             </div>
 
             <div class="form-row">
                 <label>Sub County / Town Council / Division</label>
-                <select name="subCounty" id="subCounty" required>
+                <select name="sub_county" id="subCounty" required>
                     <option value="">Select county/municipality first</option>
                 </select>
             </div>
@@ -512,7 +522,7 @@
             <div class="form-row">
                 <label>Nearest Health Facility</label>
                 <div style="width:68%;">
-                    <input type="text" name="nearestHealth" id="nearestHealth"
+                    <input type="text" name="nearest_health" id="nearestHealth"
                            placeholder="Type nearest health facility or use automatic search">
                     <div id="locationStatus"
                          style="font-size:10px;color:#64748b;margin-top:5px;">
@@ -533,18 +543,18 @@
             
             <div class="form-row">
                 <label>Full Name</label>
-                <input type="text" name="kinName" id="kinName" placeholder="Emergency contact name">
+                <input type="text" name="kin_name" id="kinName" placeholder="Emergency contact name">
             </div>
             
             <div class="form-row">
                 <label>Relationship</label>
-                <input type="text" name="kinRelationship" id="kinRelationship" placeholder="e.g., Husband, Mother">
+                <input type="text" name="kin_relationship" id="kinRelationship" placeholder="e.g., Husband, Mother">
             </div>
             
             <div class="form-row">
                 <label>Phone Number</label>
                 <div class="phone-row">
-                    <select name="kinCountryCode" id="kinCountryCode">
+                    <select name="kin_country_code" id="kinCountryCode">
                         <option value="+256">🇺🇬 Uganda (+256)</option>
                         <option value="+254">🇰🇪 Kenya (+254)</option>
                         <option value="+255">🇹🇿 Tanzania (+255)</option>
@@ -558,7 +568,7 @@
                         <option value="+44">🇬🇧 United Kingdom (+44)</option>
                         <option value="+27">🇿🇦 South Africa (+27)</option>
                     </select>
-                    <input type="text" name="kinContact" id="kinContact" placeholder="Phone number">
+                    <input type="text" name="kin_contact" id="kinContact" placeholder="Phone number">
                 </div>
             </div>
 
@@ -567,13 +577,13 @@
             
             <div class="form-row">
                 <label>First day of last period</label>
-                <input type="date" id="lastPeriod" name="lastPeriod">
+                <input type="date" id="lastPeriod" name="last_period">
                 <small>Helps calculate due date</small>
             </div>
             
             <div class="form-row">
                 <label>Your due date</label>
-                <input type="date" id="expectedDelivery" name="expectedDelivery" readonly>
+                <input type="date" id="expectedDelivery" name="expected_delivery" readonly>
             </div>
             
             <div class="form-row">
@@ -597,141 +607,109 @@
 // Fetch user data from server
 async function loadUserData() {
     try {
-        const response = await fetch('get_user_profile.php');
+        const response = await fetch('get_user_profile.php', {
+            credentials: 'same-origin'
+        });
         const data = await response.json();
-        
-        console.log("Profile data received:", data); // Check console
-        
-        if (data.success) {
-            // Fill readonly fields
-            document.getElementById('displayFirstname').innerHTML = data.firstname || '';
-            document.getElementById('displayLastname').innerHTML = data.lastname || '';
-            document.getElementById('displayEmail').innerHTML = data.email || '';
 
-            
-            // Fill profile data if exists
-            if (data.profile) {
-                document.getElementById('age').value = data.profile.age || '';
-                document.getElementById('nearestHealth').value =
-                    data.profile.nearest_health || '';
-                // Restore saved address selections after location lists load.
-                async function restoreSavedLocation() {
+        console.log('Profile data received:', data);
 
-                    const profile =
-                        data.profile || {};
+        if (!data.success) {
+            throw new Error(data.message || 'Unable to load profile.');
+        }
 
-                    if (profile.district) {
+        const profile = data.profile || {};
 
-                        districtSelect.value =
-                            profile.district;
+        const phone = document.getElementById('phone');
+        const nationality = document.getElementById('nationality');
+        const age = document.getElementById('age');
+        const nearestHealth = document.getElementById('nearestHealth');
+        const kinName = document.getElementById('kinName');
+        const kinRelationship = document.getElementById('kinRelationship');
+        const kinCountryCode = document.getElementById('kinCountryCode');
+        const kinContact = document.getElementById('kinContact');
+        const lastPeriod = document.getElementById('lastPeriod');
 
-                        districtSelect.dispatchEvent(
-                            new Event('change')
-                        );
+        if (phone) phone.value = profile.phone || data.phone || '';
+        if (nationality) nationality.value = profile.nationality || 'Ugandan';
+        if (age) age.value = profile.age ?? '';
+        if (nearestHealth) nearestHealth.value = profile.nearest_health || '';
+        if (kinName) kinName.value = profile.kin_name || '';
+        if (kinRelationship) kinRelationship.value = profile.kin_relationship || '';
+        if (kinCountryCode) kinCountryCode.value = profile.kin_country_code || '+256';
 
-                        await new Promise(
-                            resolve =>
-                                setTimeout(resolve, 200)
-                        );
-                    }
-
-                    if (profile.county) {
-
-                        countySelect.value =
-                            profile.county;
-
-                        countySelect.dispatchEvent(
-                            new Event('change')
-                        );
-
-                        await new Promise(
-                            resolve =>
-                                setTimeout(resolve, 200)
-                        );
-                    }
-
-                    if (profile.sub_county) {
-
-                        subCountySelect.value =
-                            profile.sub_county;
-
-                        subCountySelect.dispatchEvent(
-                            new Event('change')
-                        );
-
-                        await new Promise(
-                            resolve =>
-                                setTimeout(resolve, 200)
-                        );
-                    }
-
-                    if (profile.parish) {
-
-                        parishSelect.value =
-                            profile.parish;
-
-                        parishSelect.dispatchEvent(
-                            new Event('change')
-                        );
-
-                        await new Promise(
-                            resolve =>
-                                setTimeout(resolve, 200)
-                        );
-                    }
-
-                    if (profile.village) {
-
-                        villageSelect.value =
-                            profile.village;
-                    }
+        if (kinContact && profile.kin_contact) {
+            const savedCode = profile.kin_country_code || '';
+            let contact = String(profile.kin_contact);
+            if (savedCode && contact.startsWith(savedCode)) {
+                contact = contact.substring(savedCode.length);
+            } else {
+                const match = contact.match(/^(\+[0-9]+)(.*)$/);
+                if (match) {
+                    if (kinCountryCode) kinCountryCode.value = match[1];
+                    contact = match[2];
                 }
+            }
+            kinContact.value = contact;
+        }
 
-                await restoreSavedLocation();
+        if (lastPeriod) lastPeriod.value = profile.last_period || '';
 
-                document.getElementById('kinName').value = data.profile.kin_name || '';
-                document.getElementById('kinRelationship').value = data.profile.kin_relationship || '';
-                
-                // Handle kin phone
-                if (data.profile.kin_contact) {
-                    const kinMatch = data.profile.kin_contact.match(/^(\+[0-9]+)(.*)$/);
-                    if (kinMatch) {
-                        document.getElementById('kinCountryCode').value = kinMatch[1];
-                        document.getElementById('kinContact').value = kinMatch[2];
-                    } else {
-                        document.getElementById('kinContact').value = data.profile.kin_contact;
-                    }
-                }
-                
-                // Handle pregnancy dates
-                if (data.profile.last_period) {
-                    document.getElementById('lastPeriod').value = data.profile.last_period;
-                    
-                    // Calculate due date
-                    const lastPeriod = new Date(data.profile.last_period);
-                    const dueDate = new Date(lastPeriod);
-                    dueDate.setDate(dueDate.getDate() + 280);
-                    document.getElementById('expectedDelivery').value = dueDate.toISOString().split('T')[0];
-                    
-                    // Calculate weeks
-                    const today = new Date();
-                    const diffDays = Math.floor((today - lastPeriod) / (1000 * 60 * 60 * 24));
-                    const weeks = Math.floor(diffDays / 7);
-                    if (weeks >= 0 && weeks <= 42) {
-                        document.getElementById('weeksPregnant').value = weeks + " weeks";
+        // Restore the saved location. county is NOT stored in user_profiles,
+        // so find the county that contains the saved sub_county when necessary.
+        async function restoreSavedLocation() {
+            if (!profile.district) return;
+
+            districtSelect.value = profile.district;
+            districtSelect.dispatchEvent(new Event('change'));
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            const districtData = UGANDA_LOCATION_DATA[profile.district];
+            if (!districtData) return;
+
+            let matchedCounty = '';
+            if (profile.sub_county && districtData.counties) {
+                for (const [countyName, countyData] of Object.entries(districtData.counties)) {
+                    if (countyData.subcounties &&
+                        Object.prototype.hasOwnProperty.call(countyData.subcounties, profile.sub_county)) {
+                        matchedCounty = countyName;
+                        break;
                     }
                 }
             }
+
+            if (matchedCounty) {
+                countySelect.value = matchedCounty;
+                countySelect.dispatchEvent(new Event('change'));
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+
+            if (!matchedCounty && districtData.direct_subcounties && profile.sub_county) {
+                subCountySelect.value = profile.sub_county;
+            } else if (profile.sub_county) {
+                subCountySelect.value = profile.sub_county;
+                subCountySelect.dispatchEvent(new Event('change'));
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+
+            if (profile.parish) {
+                parishSelect.value = profile.parish;
+                parishSelect.dispatchEvent(new Event('change'));
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+
+            if (profile.village) {
+                villageSelect.value = profile.village;
+            }
         }
+
+        await restoreSavedLocation();
+        calculatePregnancyDetails();
         updateProgress();
     } catch (error) {
         console.error('Error loading profile:', error);
-        document.getElementById('displayFirstname').innerHTML = 'Error loading';
-        document.getElementById('displayLastname').innerHTML = 'Error loading';
-        document.getElementById('displayEmail').innerHTML = 'Error loading';
     }
 }
-
 
 /* ==========================================================
    UGANDA LOCATION CASCADE
